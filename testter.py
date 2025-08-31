@@ -1,7 +1,7 @@
 # ==============================================================================
 # Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 2.7 (Penambahan visualisasi data)
+# Versi: 2.8 (Perbaikan error KeyError & ValueError)
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -137,7 +137,7 @@ def calculate_likert_average(df, col_list):
     averages = {}
     for col in col_list:
         if col in df.columns:
-            series = df[col].map(mapping)
+            series = df[col].astype(str).str.strip().map(mapping)
             if not series.isnull().all():
                 averages[col] = series.mean()
     return pd.DataFrame.from_dict(averages, orient='index', columns=['Rata-rata']).sort_index()
@@ -185,8 +185,7 @@ st.markdown("<div class='main-column'>", unsafe_allow_html=True)
 st.markdown("<div class='header-title'>Dashboard Analisis Survei Restoran</div>", unsafe_allow_html=True)
 st.markdown("<div class='header-subtitle'>Analisis Mendalam dari Respon Konsumen</div>", unsafe_allow_html=True)
 
-# Placeholder untuk API key, sesuai permintaan Anda
-# Catatan: Kunci API Groq tidak diperlukan untuk analisis ini, tetapi saya sertakan sebagai contoh
+# Placeholder untuk API key
 groq_api_key = "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"
 
 # --- Bagian Unggah File ---
@@ -218,12 +217,11 @@ if uploaded_file:
                                 color='Frekuensi',
                                 color_continuous_scale=px.colors.sequential.YlGnBu)
                 st.plotly_chart(fig_q1, use_container_width=True)
-
             else:
                 st.info("Kolom 'Q1_1' tidak ditemukan dalam data.")
             
             st.subheader("2. Frekuensi Unaided Awareness (Q1_1, Q2_1 - Q2_5)")
-            unaided_cols = [f'Q2_{i}' for i in range(1, 6) if f'Q2_{i}' in df.columns]
+            unaided_cols = [f'Q2_{i}' for i in range(1, 6)]
             unaided_combined = pd.concat([df.get('Q1_1', pd.Series()).dropna(), process_multi_response(df, unaided_cols)], ignore_index=True)
             if not unaided_combined.empty:
                 unaided_freq = unaided_combined.value_counts().reset_index()
@@ -242,7 +240,7 @@ if uploaded_file:
         # --- Analisis Total Awareness ---
         with st.expander("📈 Total Awareness"):
             st.subheader("Frekuensi Total Awareness (Q3_1 - Q3_9)")
-            total_awareness_cols = [f'Q3_{i}' for i in range(1, 10) if f'Q3_{i}' in df.columns]
+            total_awareness_cols = [f'Q3_{i}' for i in range(1, 10)]
             total_awareness_combined = process_multi_response(df, total_awareness_cols)
             if not total_awareness_combined.empty:
                 total_awareness_freq = total_awareness_combined.value_counts().reset_index()
@@ -281,7 +279,7 @@ if uploaded_file:
         with st.expander("📊 Rata-rata Skala Likert"):
             # Tingkat Kepentingan (Q16_1 - Q19_5)
             st.subheader("1. Rata-rata Tingkat Kepentingan (Q16 - Q19)")
-            importance_cols = [f'Q{i}_{j}' for i in range(16, 20) for j in range(1, 6) if f'Q{i}_{j}' in df.columns]
+            importance_cols = [f'Q{i}_{j}' for i in range(16, 20) for j in range(1, 6)]
             importance_avg = calculate_likert_average(df, importance_cols)
             if not importance_avg.empty:
                 st.dataframe(importance_avg, use_container_width=True)
@@ -297,7 +295,7 @@ if uploaded_file:
             
             # Tingkat Kepuasan (Q20_1 - Q24_5)
             st.subheader("2. Rata-rata Tingkat Kepuasan (Q20 - Q24)")
-            satisfaction_cols = [f'Q{i}_{j}' for i in range(20, 25) for j in range(1, 6) if f'Q{i}_{j}' in df.columns]
+            satisfaction_cols = [f'Q{i}_{j}' for i in range(20, 25) for j in range(1, 6)]
             satisfaction_avg = calculate_likert_average(df, satisfaction_cols)
             if not satisfaction_avg.empty:
                 st.dataframe(satisfaction_avg, use_container_width=True)
@@ -313,7 +311,7 @@ if uploaded_file:
             
             # Tingkat Persesuaian (Q25_1 - Q28_2)
             st.subheader("3. Rata-rata Tingkat Persesuaian (Q25 - Q28)")
-            agreement_cols = [f'Q{i}_{j}' for i in range(25, 29) for j in range(1, 5) if f'Q{i}_{j}' in df.columns]
+            agreement_cols = [f'Q{i}_{j}' for i in range(25, 29) for j in range(1, 5)]
             agreement_avg = calculate_likert_average(df, agreement_cols)
             if not agreement_avg.empty:
                 st.dataframe(agreement_avg, use_container_width=True)
@@ -349,9 +347,9 @@ if uploaded_file:
             st.subheader("Tabel Silang (Crosstab) & Visualisasi")
             st.write("Pilih 2 parameter untuk membuat tabel silang. Data yang akan digunakan adalah dari Skala Likert dan Frekuensi.")
             
-            importance_cols = [f'Q{i}_{j}' for i in range(16, 20) for j in range(1, 6) if f'Q{i}_{j}' in df.columns]
-            satisfaction_cols = [f'Q{i}_{j}' for i in range(20, 25) for j in range(1, 6) if f'Q{i}_{j}' in df.columns]
-            agreement_cols = [f'Q{i}_{j}' for i in range(25, 29) for j in range(1, 5) if f'Q{i}_{j}' in df.columns]
+            importance_cols = [f'Q{i}_{j}' for i in range(16, 20) for j in range(1, 6)]
+            satisfaction_cols = [f'Q{i}_{j}' for i in range(20, 25) for j in range(1, 6)]
+            agreement_cols = [f'Q{i}_{j}' for i in range(25, 29) for j in range(1, 5)]
             all_likert_cols = importance_cols + satisfaction_cols + agreement_cols
             frequency_cols = [f'S{i}_{j}' for i in range(9, 13) for j in range(1, 8)] + ['S13', 'S14']
             
@@ -365,7 +363,8 @@ if uploaded_file:
                 'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5
             }
             for col in all_likert_cols:
-                likert_df[col] = likert_df[col].astype(str).str.strip().map(likert_mapping)
+                if col in likert_df.columns:
+                    likert_df[col] = likert_df[col].astype(str).str.strip().map(likert_mapping)
 
             freq_mapping = {
                 'Setiap hari': 7.0, 'Hampir setiap hari': 6.0, '4~6 kali dalam satu minggu': 5.0,
@@ -381,8 +380,9 @@ if uploaded_file:
                 'Lebih dari 10 kali': 10.0, 'Kurang dari 1 kali': 0.5,
             }
             for col in frequency_cols:
-                likert_df[col] = likert_df[col].astype(str).str.strip().str.lower().map(
-                    {k.lower(): v for k, v in freq_mapping.items()})
+                if col in likert_df.columns:
+                    likert_df[col] = likert_df[col].astype(str).str.strip().str.lower().map(
+                        {k.lower(): v for k, v in freq_mapping.items()})
             
             s1_mapping = {'Laki-laki': 'Laki-laki', 'Perempuan': 'Perempuan'}
             s2_mapping = {
