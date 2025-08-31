@@ -25,7 +25,7 @@ st.set_page_config(
 # --- Desain UI/UX Profesional dengan CSS ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+    @import url('https://fonts.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
     .stApp {
         background-color: #F0F4F8;
@@ -189,6 +189,17 @@ if uploaded_file:
         st.success("File berhasil diunggah!")
         st.write("Pratinjau Data:")
         st.dataframe(df.head())
+        
+        # --- Bagian Baru untuk Analisis Kolom
+        st.info("Jika tidak ada output yang muncul, pastikan nama kolom pada file Anda sesuai dengan yang dibutuhkan oleh script. Anda dapat melihat semua nama kolom di bagian 'Data & Kolom' di bawah ini.")
+        
+        with st.expander("📁 Data & Kolom", expanded=False):
+            st.subheader("Detail Data")
+            st.write("Pratinjau Lengkap Data:")
+            st.dataframe(df, use_container_width=True)
+            
+            st.write("Daftar Kolom yang Terdeteksi:")
+            st.write(df.columns.tolist())
         
         st.markdown("<hr style='margin-top: 2rem; margin-bottom: 1.5rem; border: 1px solid #E2E8F0;'>", unsafe_allow_html=True)
 
