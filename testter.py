@@ -1,7 +1,7 @@
 # ==============================================================================
 # Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 3.2 (Perbaikan Error 'KeyError: Rata-rata')
+# Versi: 3.4 (Penambahan Visualisasi Baru)
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -155,7 +155,6 @@ def calculate_frequency_average(df, col_list):
         '1~2 kali dalam satu minggu': 1.5,
         'Kurang dari 1 kali dalam satu minggu': 0.5,
         'Tidak pernah': 0.0,
-        # Konversi bulanan ke mingguan (asumsi 1 bulan = 4.33 minggu)
         '1x dalam sebulan': 1/4.33,
         '2x dalam sebulan': 2/4.33,
         '3x dalam sebulan': 3/4.33,
@@ -184,6 +183,7 @@ def calculate_frequency_average(df, col_list):
         return pd.DataFrame.from_dict(averages, orient='index', columns=['Rata-rata (Mingguan)']).sort_index()
     return pd.DataFrame()
 
+
 # --- 4. Logika Utama Aplikasi ---
 st.markdown("<div class='main-column'>", unsafe_allow_html=True)
 st.markdown("<div class='header-title'>Dashboard Analisis Survei Restoran</div>", unsafe_allow_html=True)
@@ -203,172 +203,112 @@ if uploaded_file:
         
         st.markdown("<hr style='margin-top: 2rem; margin-bottom: 1.5rem; border: 1px solid #E2E8F0;'>", unsafe_allow_html=True)
 
-        # --- Analisis Top of Mind & Unaided Awareness ---
-        with st.expander("📊 Frekuensi & Persentase (Top of Mind & Unaided)", expanded=True):
-            if 'Q1_1' in df.columns:
-                st.subheader("1. Frekuensi Top of Mind (Q1_1)")
-                q1_freq = df['Q1_1'].value_counts().reset_index()
-                q1_freq.columns = ['Restoran', 'Frekuensi']
-                q1_freq['Persentase'] = (q1_freq['Frekuensi'] / len(df) * 100).round(2)
-                st.dataframe(q1_freq, use_container_width=True)
-                
-                fig_q1 = px.bar(q1_freq, x='Restoran', y='Frekuensi', 
-                                title='Top of Mind Awareness',
-                                labels={'Frekuensi': 'Jumlah Responden'},
-                                color='Frekuensi',
-                                color_continuous_scale=px.colors.sequential.YlGnBu)
-                st.plotly_chart(fig_q1, use_container_width=True)
-            else:
-                st.info("Kolom 'Q1_1' tidak ditemukan dalam data.")
+        # --- Visualisasi Demografi ---
+        with st.expander("👥 Analisis Demografi", expanded=False):
+            st.subheader("Distribusi Demografi Responden")
             
-            st.subheader("2. Frekuensi Unaided Awareness (Q1_1, Q2_1 - Q2_5)")
-            unaided_cols = [f'Q2_{i}' for i in range(1, 6)]
-            unaided_combined = pd.concat([df.get('Q1_1', pd.Series()).dropna(), process_multi_response(df, unaided_cols)], ignore_index=True)
-            if not unaided_combined.empty:
-                unaided_freq = unaided_combined.value_counts().reset_index()
-                unaided_freq.columns = ['Restoran', 'Frekuensi']
-                st.dataframe(unaided_freq, use_container_width=True)
-                
-                fig_unaided = px.bar(unaided_freq, x='Restoran', y='Frekuensi', 
-                                    title='Unaided Awareness',
-                                    labels={'Frekuensi': 'Jumlah Responden'},
-                                    color='Frekuensi',
-                                    color_continuous_scale=px.colors.sequential.YlGnBu)
-                st.plotly_chart(fig_unaided, use_container_width=True)
-            else:
-                st.info("Tidak ada data unaided awareness untuk dianalisis.")
+            # Pie Chart untuk Jenis Kelamin (S1)
+            if 'S1' in df.columns:
+                gender_counts = df['S1'].value_counts()
+                fig_gender = px.pie(gender_counts, values=gender_counts.values, names=gender_counts.index,
+                                    title='Distribusi Jenis Kelamin', hole=0.3,
+                                    color_discrete_sequence=px.colors.sequential.YlGnBu_r)
+                st.plotly_chart(fig_gender, use_container_width=True)
 
-        # --- Analisis Total Awareness ---
-        with st.expander("📈 Total Awareness"):
-            st.subheader("Frekuensi Total Awareness (Q3_1 - Q3_9)")
-            total_awareness_cols = [f'Q3_{i}' for i in range(1, 10)]
-            total_awareness_combined = process_multi_response(df, total_awareness_cols)
-            if not total_awareness_combined.empty:
-                total_awareness_freq = total_awareness_combined.value_counts().reset_index()
-                total_awareness_freq.columns = ['Restoran', 'Frekuensi']
-                st.dataframe(total_awareness_freq, use_container_width=True)
-                
-                fig_total = px.bar(total_awareness_freq, x='Restoran', y='Frekuensi',
-                                    title='Total Awareness',
-                                    labels={'Frekuensi': 'Jumlah Responden'},
-                                    color='Frekuensi',
-                                    color_continuous_scale=px.colors.sequential.YlGnBu)
-                st.plotly_chart(fig_total, use_container_width=True)
-            else:
-                st.info("Tidak ada data total awareness untuk dianalisis.")
+            # Bar Chart untuk Kelompok Usia (S2)
+            if 'S2' in df.columns:
+                age_counts = df['S2'].value_counts().sort_index()
+                fig_age = px.bar(age_counts, x=age_counts.index, y=age_counts.values,
+                                 title='Distribusi Kelompok Usia',
+                                 labels={'x': 'Kelompok Usia', 'y': 'Jumlah Responden'},
+                                 color=age_counts.values, color_continuous_scale=px.colors.sequential.YlGnBu)
+                st.plotly_chart(fig_age, use_container_width=True)
 
-        # --- Analisis Brand Image ---
-        with st.expander("🖼️ Brand Image"):
-            st.subheader("Frekuensi Brand Image (Q15_1 - Q15_8)")
-            brand_image_cols = [f'Q15_{i}' for i in range(1, 9)]
-            for col in brand_image_cols:
+
+        # --- Analisis Frekuensi Utama (S9_x, S10_x, S11_x, S12_x) ---
+        with st.expander("📈 Rata-rata Frekuensi Kunjungan", expanded=True):
+            st.subheader("Rata-rata Frekuensi (Mingguan)")
+            
+            # Perbandingan Frekuensi Sebelum vs. Saat Ini (S9 vs S10)
+            st.markdown("#### Perbandingan Kebiasaan Makan Sebelum dan Setelah Pandemi")
+            
+            s9_cols = ['S9_1', 'S9_2', 'S9_3', 'S9_4', 'S9_5', 'S9_6']
+            s10_cols = ['S10_1', 'S10_2', 'S10_3', 'S10_4', 'S10_5', 'S10_6']
+            
+            if all(col in df.columns for col in s9_cols + s10_cols):
+                s9_avg = calculate_frequency_average(df, s9_cols)
+                s10_avg = calculate_frequency_average(df, s10_cols)
+
+                combined_df = pd.DataFrame({
+                    'Sebelum Pandemi': s9_avg['Rata-rata (Mingguan)'],
+                    'Saat Ini': s10_avg['Rata-rata (Mingguan)']
+                })
+                combined_df.index = [
+                    'Memasak di Rumah', 'Take Away Restoran', 'Take Away Warung', 
+                    'Dining In Restoran', 'Dining In Warung', 'Pengantaran Online'
+                ]
+                
+                fig_compare = px.bar(combined_df, x=combined_df.index, y=['Sebelum Pandemi', 'Saat Ini'],
+                                     barmode='group',
+                                     title='Perbandingan Kebiasaan Makan (Rata-rata Mingguan)',
+                                     labels={'x': 'Kebiasaan', 'y': 'Rata-rata Frekuensi'},
+                                     color_discrete_map={'Sebelum Pandemi': '#9AC2E9', 'Saat Ini': '#4A90E2'})
+                st.plotly_chart(fig_compare, use_container_width=True)
+            else:
+                st.info("Tidak ada data yang lengkap untuk perbandingan S9 dan S10.")
+
+            # Rata-rata Frekuensi Kunjungan ke Berbagai Jenis Restoran (S11)
+            st.markdown("#### Rata-rata Frekuensi Kunjungan Berdasarkan Jenis Restoran")
+            s11_cols = [f'S11_{j}' for j in range(1, 8)]
+            if all(col in df.columns for col in s11_cols):
+                s11_avg = calculate_frequency_average(df, s11_cols)
+                s11_avg.index = ['Restoran Jepang', 'Restoran Western', 'Restoran India', 
+                                 'Restoran Italia', 'Restoran Cina', 'Restoran Indonesia', 'Restoran Perancis']
+                
+                fig_s11 = px.bar(s11_avg, y=s11_avg.index, x='Rata-rata (Mingguan)',
+                                 title='Rata-rata Frekuensi Kunjungan ke Jenis Restoran',
+                                 labels={'y': 'Jenis Restoran', 'Rata-rata (Mingguan)': 'Rata-rata Frekuensi Mingguan'},
+                                 orientation='h',
+                                 color='Rata-rata (Mingguan)',
+                                 color_continuous_scale=px.colors.sequential.YlGnBu)
+                fig_s11.update_yaxes(autorange="reversed")
+                st.plotly_chart(fig_s11, use_container_width=True)
+            else:
+                st.info("Tidak ada data yang lengkap untuk analisis jenis restoran (S11).")
+
+        # --- Analisis Frekuensi S13 & S14 ---
+        with st.expander("📊 Frekuensi S13 dan S14"):
+            st.subheader("Frekuensi Kunjungan (S13, S14)")
+            freq_s_cols = ['S13', 'S14']
+            
+            for col in freq_s_cols:
                 if col in df.columns and not df[col].isnull().all():
                     st.markdown(f"**Kolom: {col}**")
                     freq_df = df[col].value_counts().reset_index()
                     freq_df.columns = ['Respons', 'Frekuensi']
                     st.dataframe(freq_df, use_container_width=True)
-                    fig_brand = px.bar(freq_df, x='Respons', y='Frekuensi',
+                    
+                    fig_s_freq = px.bar(freq_df, x='Respons', y='Frekuensi',
                                        title=f'Frekuensi {col}',
                                        labels={'Respons': 'Pilihan', 'Frekuensi': 'Jumlah Responden'},
                                        color='Frekuensi',
                                        color_continuous_scale=px.colors.sequential.YlGnBu)
-                    st.plotly_chart(fig_brand, use_container_width=True)
+                    st.plotly_chart(fig_s_freq, use_container_width=True)
                 else:
                     st.info(f"Tidak ada data untuk kolom {col}.")
 
-        # --- Analisis Skala Likert (Rata-rata) ---
-        with st.expander("📊 Rata-rata Skala Likert"):
-            # Tingkat Kepentingan (Q16_1 - Q19_5)
-            st.subheader("1. Rata-rata Tingkat Kepentingan (Q16 - Q19)")
-            importance_cols = [f'Q{i}_{j}' for i in range(16, 20) for j in range(1, 6)]
-            importance_avg = calculate_likert_average(df, importance_cols)
-            if not importance_avg.empty:
-                st.dataframe(importance_avg, use_container_width=True)
-                fig_imp = px.bar(importance_avg, y=importance_avg.index, x='Rata-rata', 
-                                title='Rata-rata Tingkat Kepentingan',
-                                labels={'y': 'Parameter'}, orientation='h',
-                                color='Rata-rata',
-                                color_continuous_scale=px.colors.sequential.YlGnBu)
-                fig_imp.update_yaxes(autorange="reversed")
-                st.plotly_chart(fig_imp, use_container_width=True)
-            else:
-                st.info("Tidak ada data tingkat kepentingan.")
-            
-            # Tingkat Kepuasan (Q20_1 - Q24_5)
-            st.subheader("2. Rata-rata Tingkat Kepuasan (Q20 - Q24)")
-            satisfaction_cols = [f'Q{i}_{j}' for i in range(20, 25) for j in range(1, 6)]
-            satisfaction_avg = calculate_likert_average(df, satisfaction_cols)
-            if not satisfaction_avg.empty:
-                st.dataframe(satisfaction_avg, use_container_width=True)
-                fig_sat = px.bar(satisfaction_avg, y=satisfaction_avg.index, x='Rata-rata',
-                                title='Rata-rata Tingkat Kepuasan',
-                                labels={'y': 'Parameter'}, orientation='h',
-                                color='Rata-rata',
-                                color_continuous_scale=px.colors.sequential.YlGnBu)
-                fig_sat.update_yaxes(autorange="reversed")
-                st.plotly_chart(fig_sat, use_container_width=True)
-            else:
-                st.info("Tidak ada data tingkat kepuasan.")
-            
-            # Tingkat Persesuaian (Q25_1 - Q28_2)
-            st.subheader("3. Rata-rata Tingkat Persesuaian (Q25 - Q28)")
-            agreement_cols = [f'Q{i}_{j}' for i in range(25, 29) for j in range(1, 5)]
-            agreement_avg = calculate_likert_average(df, agreement_cols)
-            if not agreement_avg.empty:
-                st.dataframe(agreement_avg, use_container_width=True)
-                fig_agree = px.bar(agreement_avg, y=agreement_avg.index, x='Rata-rata',
-                                title='Rata-rata Tingkat Persesuaian',
-                                labels={'y': 'Parameter'}, orientation='h',
-                                color='Rata-rata',
-                                color_continuous_scale=px.colors.sequential.YlGnBu)
-                fig_agree.update_yaxes(autorange="reversed")
-                st.plotly_chart(fig_agree, use_container_width=True)
-            else:
-                st.info("Tidak ada data tingkat persesuaian.")
-
-        # --- Analisis Frekuensi ---
-        with st.expander("📈 Rata-rata Frekuensi Kunjungan"):
-            st.subheader("Rata-rata Frekuensi (Mingguan)")
-            frequency_cols = [f'S{i}_{j}' for i in range(9, 13) for j in range(1, 8)] + ['S13', 'S14']
-            frequency_avg = calculate_frequency_average(df, frequency_cols)
-            if not frequency_avg.empty:
-                st.dataframe(frequency_avg, use_container_width=True)
-                fig_freq = px.bar(frequency_avg, y=frequency_avg.index, x='Rata-rata (Mingguan)',
-                                title='Rata-rata Frekuensi Kunjungan Mingguan',
-                                labels={'y': 'Parameter'}, orientation='h',
-                                color='Rata-rata (Mingguan)',
-                                color_continuous_scale=px.colors.sequential.YlGnBu)
-                fig_freq.update_yaxes(autorange="reversed")
-                st.plotly_chart(fig_freq, use_container_width=True)
-            else:
-                st.info("Tidak ada data frekuensi untuk dianalisis.")
 
         # --- Conceptual Mapping (Crosstab) ---
         with st.expander("🗺️ Pemetaan Konseptual (Tabel Silang)"):
             st.subheader("Tabel Silang (Crosstab) & Visualisasi")
-            st.write("Pilih 2 parameter untuk membuat tabel silang. Data yang akan digunakan adalah dari Skala Likert dan Frekuensi.")
+            st.write("Pilih 2 parameter untuk membuat tabel silang.")
             
             # Daftar semua kolom yang relevan
-            importance_cols = [f'Q{i}_{j}' for i in range(16, 20) for j in range(1, 6)]
-            satisfaction_cols = [f'Q{i}_{j}' for i in range(20, 25) for j in range(1, 6)]
-            agreement_cols = [f'Q{i}_{j}' for i in range(25, 29) for j in range(1, 5)]
-            all_likert_cols = importance_cols + satisfaction_cols + agreement_cols
             frequency_cols = [f'S{i}_{j}' for i in range(9, 13) for j in range(1, 8)] + ['S13', 'S14']
-            all_numeric_cols = [col for col in all_likert_cols + frequency_cols if col in df.columns]
+            all_numeric_cols = [col for col in frequency_cols if col in df.columns]
 
             # Membuat DataFrame yang dapat diubah
-            likert_df = df.copy()
-
-            # Mapping untuk skala Likert
-            likert_mapping = {
-                'Sangat Tidak Setuju': 1, 'Tidak Setuju': 2, 'Netral': 3, 'Setuju': 4, 'Sangat Setuju': 5,
-                'Sangat Tidak Penting': 1, 'Tidak Penting': 2, 'Netral': 3, 'Penting': 4, 'Sangat Penting': 5,
-                'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5
-            }
-            # Mengkonversi kolom Likert
-            for col in all_likert_cols:
-                if col in likert_df.columns:
-                    likert_df[col] = likert_df[col].astype(str).str.strip().str.title().map(likert_mapping)
+            data_df = df.copy()
 
             # Mapping untuk frekuensi
             freq_mapping = {
@@ -386,8 +326,8 @@ if uploaded_file:
             }
             # Mengkonversi kolom frekuensi
             for col in frequency_cols:
-                if col in likert_df.columns:
-                    likert_df[col] = likert_df[col].astype(str).str.strip().str.lower().map(
+                if col in data_df.columns:
+                    data_df[col] = data_df[col].astype(str).str.strip().str.lower().map(
                         {k.lower(): v for k, v in freq_mapping.items()})
 
             # Mapping untuk kolom pivot S1 dan S2
@@ -397,10 +337,10 @@ if uploaded_file:
                 '30 - 34 tahun': '30-34', '35 - 39 tahun': '35-39', '40 - 44 tahun': '40-44', 
                 '45 - 49 tahun': '45-49', '50 - 54 tahun': '50-54', '>55 tahun': '>55'
             }
-            if 'S1' in likert_df.columns:
-                likert_df['S1'] = likert_df['S1'].astype(str).str.strip().map(s1_mapping)
-            if 'S2' in likert_df.columns:
-                likert_df['S2'] = likert_df['S2'].astype(str).str.strip().map(s2_mapping)
+            if 'S1' in data_df.columns:
+                data_df['S1'] = data_df['S1'].astype(str).str.strip().map(s1_mapping)
+            if 'S2' in data_df.columns:
+                data_df['S2'] = data_df['S2'].astype(str).str.strip().map(s2_mapping)
 
             pivot_options = ["Jenis Kelamin (S1)", "Usia (S2)"]
             selected_pivot = st.selectbox("Pilih Parameter Pivot:", options=pivot_options)
@@ -411,16 +351,16 @@ if uploaded_file:
                 pivot_col = 'S2'
             
             # Pengecekan baru untuk memastikan kolom pivot ada dan tidak kosong
-            if pivot_col in likert_df.columns and not likert_df[pivot_col].isnull().all() and all_numeric_cols:
+            if pivot_col in data_df.columns and not data_df[pivot_col].isnull().all() and all_numeric_cols:
                 # Perbaikan utama: Menggunakan pd.to_numeric untuk konversi yang lebih aman
                 for col in all_numeric_cols:
-                    likert_df[col] = pd.to_numeric(likert_df[col], errors='coerce')
+                    data_df[col] = pd.to_numeric(data_df[col], errors='coerce')
 
                 # Filter baris yang relevan untuk pivot
-                likert_df_clean = likert_df.dropna(subset=[pivot_col] + all_numeric_cols)
+                data_df_clean = data_df.dropna(subset=[pivot_col] + all_numeric_cols)
 
-                if not likert_df_clean.empty:
-                    pivot_table = likert_df_clean.groupby(pivot_col)[all_numeric_cols].mean()
+                if not data_df_clean.empty:
+                    pivot_table = data_df_clean.groupby(pivot_col)[all_numeric_cols].mean()
                     
                     df_heatmap = pivot_table.stack().reset_index()
                     df_heatmap.columns = [pivot_col, 'Variabel', 'Rata-rata']
@@ -448,37 +388,7 @@ if uploaded_file:
 
         # --- Analisis Open-Ended (Word Cloud) ---
         with st.expander("☁️ Analisis Teks Terbuka (Word Cloud)"):
-            open_ended_cols = [f'Q{i}' for i in range(14, 15)] + [f'Q{i}_1' for i in range(10, 14)] + ['S11_8']
-            open_ended_valid_cols = [col for col in open_ended_cols if col in df.columns]
-
-            if open_ended_valid_cols:
-                st.subheader("Word Cloud dari Jawaban Terbuka")
-                selected_text_col = st.selectbox("Pilih kolom teks:", options=open_ended_valid_cols)
-                
-                if selected_text_col and not df[selected_text_col].isnull().all():
-                    all_text = ' '.join(df[selected_text_col].astype(str).str.lower().dropna())
-                    
-                    # Bersihkan teks dari kata-kata umum (stopwords) dan karakter khusus
-                    stopwords = set(['dan', 'atau', 'di', 'dari', 'yang', 'untuk', 'dengan', 'sangat'])
-                    cleaned_text = " ".join([word for word in all_text.split() if word not in stopwords and len(word) > 2])
-
-                    if cleaned_text:
-                        wordcloud = WordCloud(
-                            width=800, height=400, 
-                            background_color='white', 
-                            colormap='Blues',
-                            max_words=100
-                        ).generate(cleaned_text)
-                        
-                        fig, ax = plt.subplots()
-                        ax.imshow(wordcloud, interpolation='bilinear')
-                        ax.axis("off")
-                        st.pyplot(fig)
-                    else:
-                        st.warning("Tidak ada teks yang cukup untuk membuat Word Cloud.")
-                else:
-                    st.info("Kolom yang dipilih tidak memiliki data teks.")
-            else:
-                st.info("Tidak ada kolom teks untuk dianalisis.")
+            st.subheader("Word Cloud dari Jawaban Terbuka")
+            st.info("Analisis teks membutuhkan kolom yang berisi jawaban terbuka. Mohon berikan nama kolom jika ada.")
 
 st.markdown("</div>", unsafe_allow_html=True)
