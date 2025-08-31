@@ -229,7 +229,7 @@ if not df.empty:
                 st.pyplot(fig)
             else:
                 st.info("Kolom Q1_1 tidak ditemukan.")
-        
+    
         with col2:
             st.subheader("Frekuensi Unaided Awareness (Q1_1, Q2_1 - Q2_5)")
             if any(col in df.columns for col in ['Q1_1', 'Q2_1', 'Q2_2', 'Q2_3', 'Q2_4', 'Q2_5']):
@@ -287,7 +287,10 @@ if not df.empty:
             if col in df.columns and not df[col].isnull().all():
                 st.markdown(f"**{col}:**")
                 
-                freq_data = df[col].value_counts().reset_index().rename(columns={'index': 'Respons', 'count': 'Frekuensi'})
+                # --- Perbaikan: Ganti baris di bawah ini ---
+                freq_data = df[col].value_counts().reset_index()
+                freq_data.columns = ['Respons', 'Frekuensi']
+                # --- Akhir Perbaikan ---
                 
                 col1, col2 = st.columns(2)
                 with col1:
