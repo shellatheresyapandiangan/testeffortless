@@ -389,6 +389,45 @@ if uploaded_file:
         # --- Analisis Open-Ended (Word Cloud) ---
         with st.expander("☁️ Analisis Teks Terbuka (Word Cloud)"):
             st.subheader("Word Cloud dari Jawaban Terbuka")
-            st.info("Analisis teks membutuhkan kolom yang berisi jawaban terbuka. Mohon berikan nama kolom jika ada.")
+            
+            # User input for the column name
+            open_ended_col = st.text_input(
+                "Masukkan nama kolom yang berisi jawaban terbuka (misal: 'Q15_text' atau 'Kritik dan Saran'):",
+                placeholder="nama_kolom_teks"
+            )
+        
+            if open_ended_col:
+                if open_ended_col in df.columns:
+                    # Filter out empty/NaN values
+                    text_data = df[open_ended_col].dropna().astype(str)
+                    
+                    if not text_data.empty:
+                        # Combine all text into a single string
+                        all_text = " ".join(text_data).lower()
+                        
+                        # Clean the text (remove non-alphanumeric, etc.) - simple version
+                        all_text = re.sub(r'[^a-zA-Z0-9\s]', '', all_text)
+                        
+                        # Generate the word cloud
+                        wordcloud = WordCloud(
+                            width=800, height=400,
+                            background_color='white',
+                            colormap='viridis',
+                            random_state=42
+                        ).generate(all_text)
+                        
+                        # Display the word cloud using matplotlib
+                        fig, ax = plt.subplots(figsize=(10, 5))
+                        ax.imshow(wordcloud, interpolation='bilinear')
+                        ax.axis("off")
+                        fig.patch.set_facecolor('#F8FAFC')
+                        
+                        st.pyplot(fig)
+                    else:
+                        st.info(f"Kolom '{open_ended_col}' tidak berisi data teks yang dapat dianalisis.")
+                else:
+                    st.error(f"Kolom '{open_ended_col}' tidak ditemukan dalam data Anda. Harap periksa nama kolomnya.")
+            else:
+                st.info("Masukkan nama kolom teks untuk membuat Word Cloud.")
 
 st.markdown("</div>", unsafe_allow_html=True)
