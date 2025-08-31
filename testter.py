@@ -1,7 +1,7 @@
 # ==============================================================================
 # Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 3.0 (Perbaikan Blank Output & Peningkatan Validasi Data)
+# Versi: 3.1 (Perbaikan Error 'ValueError')
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -185,6 +185,9 @@ st.markdown("<div class='main-column'>", unsafe_allow_html=True)
 st.markdown("<div class='header-title'>Dashboard Analisis Survei Restoran</div>", unsafe_allow_html=True)
 st.markdown("<div class='header-subtitle'>Analisis Mendalam dari Respon Konsumen</div>", unsafe_allow_html=True)
 
+# Placeholder untuk API key
+groq_api_key = "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"
+
 # --- Bagian Unggah File ---
 st.subheader("Unggah Data Survei Anda")
 uploaded_file = st.file_uploader("Pilih file CSV atau Excel Anda", type=['csv', 'xlsx', 'xls'])
@@ -344,26 +347,29 @@ if uploaded_file:
             st.subheader("Tabel Silang (Crosstab) & Visualisasi")
             st.write("Pilih 2 parameter untuk membuat tabel silang. Data yang akan digunakan adalah dari Skala Likert dan Frekuensi.")
             
+            # Daftar semua kolom yang relevan
             importance_cols = [f'Q{i}_{j}' for i in range(16, 20) for j in range(1, 6)]
             satisfaction_cols = [f'Q{i}_{j}' for i in range(20, 25) for j in range(1, 6)]
             agreement_cols = [f'Q{i}_{j}' for i in range(25, 29) for j in range(1, 5)]
             all_likert_cols = importance_cols + satisfaction_cols + agreement_cols
             frequency_cols = [f'S{i}_{j}' for i in range(9, 13) for j in range(1, 8)] + ['S13', 'S14']
-            
-            # Filter kolom yang benar-benar ada di DataFrame
             all_numeric_cols = [col for col in all_likert_cols + frequency_cols if col in df.columns]
-            
+
+            # Membuat DataFrame yang dapat diubah
             likert_df = df.copy()
-            
+
+            # Mapping untuk skala Likert
             likert_mapping = {
                 'Sangat Tidak Setuju': 1, 'Tidak Setuju': 2, 'Netral': 3, 'Setuju': 4, 'Sangat Setuju': 5,
                 'Sangat Tidak Penting': 1, 'Tidak Penting': 2, 'Netral': 3, 'Penting': 4, 'Sangat Penting': 5,
                 'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5
             }
+            # Mengkonversi kolom Likert
             for col in all_likert_cols:
                 if col in likert_df.columns:
-                    likert_df[col] = likert_df[col].astype(str).str.strip().map(likert_mapping)
+                    likert_df[col] = likert_df[col].astype(str).str.strip().str.title().map(likert_mapping)
 
+            # Mapping untuk frekuensi
             freq_mapping = {
                 'Setiap hari': 7.0, 'Hampir setiap hari': 6.0, '4~6 kali dalam satu minggu': 5.0,
                 '2~3 kali dalam satu minggu': 2.5, '1~2 kali dalam satu minggu': 1.5,
@@ -377,23 +383,24 @@ if uploaded_file:
                 '4-6x dalam seminggu': 5.0, '7x dalam seminggu': 7.0,
                 'Lebih dari 10 kali': 10.0, 'Kurang dari 1 kali': 0.5,
             }
+            # Mengkonversi kolom frekuensi
             for col in frequency_cols:
                 if col in likert_df.columns:
                     likert_df[col] = likert_df[col].astype(str).str.strip().str.lower().map(
                         {k.lower(): v for k, v in freq_mapping.items()})
-            
+
+            # Mapping untuk kolom pivot S1 dan S2
             s1_mapping = {'Laki-laki': 'Laki-laki', 'Perempuan': 'Perempuan'}
             s2_mapping = {
                 '15 - 19 tahun': '15-19', '20 - 24 tahun': '20-24', '25 - 29 tahun': '25-29', 
                 '30 - 34 tahun': '30-34', '35 - 39 tahun': '35-39', '40 - 44 tahun': '40-44', 
                 '45 - 49 tahun': '45-49', '50 - 54 tahun': '50-54', '>55 tahun': '>55'
             }
-            
             if 'S1' in likert_df.columns:
                 likert_df['S1'] = likert_df['S1'].astype(str).str.strip().map(s1_mapping)
             if 'S2' in likert_df.columns:
                 likert_df['S2'] = likert_df['S2'].astype(str).str.strip().map(s2_mapping)
-            
+
             pivot_options = ["Jenis Kelamin (S1)", "Usia (S2)"]
             selected_pivot = st.selectbox("Pilih Parameter Pivot:", options=pivot_options)
             
@@ -404,26 +411,36 @@ if uploaded_file:
             
             # Pengecekan baru untuk memastikan kolom pivot ada dan tidak kosong
             if pivot_col in likert_df.columns and not likert_df[pivot_col].isnull().all() and all_numeric_cols:
-                pivot_table = likert_df.groupby(pivot_col)[all_numeric_cols].mean()
-                
-                df_heatmap = pivot_table.stack().reset_index()
-                df_heatmap.columns = [pivot_col, 'Variabel', 'Rata-rata']
-                
-                fig = px.imshow(
-                    df_heatmap.pivot(index=pivot_col, columns='Variabel', values='Rata-rata'),
-                    color_continuous_scale='YlGnBu',
-                    aspect="auto",
-                    labels={'x': 'Variabel', 'y': selected_pivot, 'color': 'Rata-rata'},
-                    title='Pemetaan Rata-rata Berdasarkan Parameter Pivot'
-                )
-                
-                fig.update_layout(
-                    xaxis_title='Variabel',
-                    yaxis_title=selected_pivot,
-                    xaxis_side="top"
-                )
-                
-                st.plotly_chart(fig, use_container_width=True)
+                # Perbaikan utama: Menggunakan pd.to_numeric untuk konversi yang lebih aman
+                for col in all_numeric_cols:
+                    likert_df[col] = pd.to_numeric(likert_df[col], errors='coerce')
+
+                # Filter baris yang relevan untuk pivot
+                likert_df_clean = likert_df.dropna(subset=[pivot_col] + all_numeric_cols)
+
+                if not likert_df_clean.empty:
+                    pivot_table = likert_df_clean.groupby(pivot_col)[all_numeric_cols].mean()
+                    
+                    df_heatmap = pivot_table.stack().reset_index()
+                    df_heatmap.columns = [pivot_col, 'Variabel', 'Rata-rata']
+                    
+                    fig = px.imshow(
+                        df_heatmap.pivot(index=pivot_col, columns='Variabel', values='Rata-rata'),
+                        color_continuous_scale='YlGnBu',
+                        aspect="auto",
+                        labels={'x': 'Variabel', 'y': selected_pivot, 'color': 'Rata-rata'},
+                        title='Pemetaan Rata-rata Berdasarkan Parameter Pivot'
+                    )
+                    
+                    fig.update_layout(
+                        xaxis_title='Variabel',
+                        yaxis_title=selected_pivot,
+                        xaxis_side="top"
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info(f"Setelah pembersihan, tidak ada data yang valid untuk membuat tabel silang dengan kolom '{pivot_col}'.")
             else:
                 st.info(f"Kolom pivot '{pivot_col}' tidak ditemukan atau tidak memiliki data yang relevan.")
 
