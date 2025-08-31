@@ -217,21 +217,25 @@ if uploaded_file:
             st.subheader("Distribusi Demografi Responden")
             
             # Pie Chart untuk Jenis Kelamin (S1)
-            if 'S1' in df.columns:
+            if 'S1' in df.columns and not df['S1'].isnull().all():
                 gender_counts = df['S1'].value_counts()
                 fig_gender = px.pie(gender_counts, values=gender_counts.values, names=gender_counts.index,
                                     title='Distribusi Jenis Kelamin', hole=0.3,
                                     color_discrete_sequence=px.colors.sequential.YlGnBu_r)
                 st.plotly_chart(fig_gender, use_container_width=True)
+            else:
+                st.info("Kolom 'S1' (Jenis Kelamin) tidak ditemukan atau tidak memiliki data.")
 
             # Bar Chart untuk Kelompok Usia (S2)
-            if 'S2' in df.columns:
+            if 'S2' in df.columns and not df['S2'].isnull().all():
                 age_counts = df['S2'].value_counts().sort_index()
                 fig_age = px.bar(age_counts, x=age_counts.index, y=age_counts.values,
                                  title='Distribusi Kelompok Usia',
                                  labels={'x': 'Kelompok Usia', 'y': 'Jumlah Responden'},
                                  color=age_counts.values, color_continuous_scale=px.colors.sequential.YlGnBu)
                 st.plotly_chart(fig_age, use_container_width=True)
+            else:
+                st.info("Kolom 'S2' (Kelompok Usia) tidak ditemukan atau tidak memiliki data.")
 
         # --- Analisis Skala Likert ---
         with st.expander("⭐ Analisis Skala Likert", expanded=False):
@@ -298,7 +302,10 @@ if uploaded_file:
             s9_cols = ['S9_1', 'S9_2', 'S9_3', 'S9_4', 'S9_5', 'S9_6']
             s10_cols = ['S10_1', 'S10_2', 'S10_3', 'S10_4', 'S10_5', 'S10_6']
             
-            if all(col in df.columns for col in s9_cols + s10_cols):
+            s9_found = all(col in df.columns for col in s9_cols)
+            s10_found = all(col in df.columns for col in s10_cols)
+
+            if s9_found and s10_found:
                 s9_avg = calculate_frequency_average(df, s9_cols)
                 s10_avg = calculate_frequency_average(df, s10_cols)
 
@@ -460,7 +467,7 @@ if uploaded_file:
             )
         
             if open_ended_col:
-                if open_ended_col in df.columns:
+                if open_ended_col in df.columns and not df[open_ended_col].isnull().all():
                     # Filter out empty/NaN values
                     text_data = df[open_ended_col].dropna().astype(str)
                     
@@ -489,7 +496,7 @@ if uploaded_file:
                     else:
                         st.info(f"Kolom '{open_ended_col}' tidak berisi data teks yang dapat dianalisis.")
                 else:
-                    st.error(f"Kolom '{open_ended_col}' tidak ditemukan dalam data Anda. Harap periksa nama kolomnya.")
+                    st.info(f"Kolom '{open_ended_col}' tidak ditemukan atau tidak memiliki data. Harap periksa nama kolomnya.")
             else:
                 st.info("Masukkan nama kolom teks untuk membuat Word Cloud.")
 
