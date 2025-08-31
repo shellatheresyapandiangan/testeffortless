@@ -1,7 +1,7 @@
 # ==============================================================================
 # Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 2.2 (dengan visualisasi interaktif dan UX yang ditingkatkan)
+# Versi: 2.4 (Perbaikan error dan data yang tercampur)
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -85,7 +85,12 @@ def load_data(uploaded_file):
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file)
         elif uploaded_file.name.endswith(('.xlsx', '.xls')):
-            df = pd.read_excel(uploaded_file)
+            try:
+                df = pd.read_excel(uploaded_file)
+            except ImportError:
+                st.error("Gagal membaca file Excel. Harap instal pustaka 'openpyxl' dengan menjalankan perintah ini:")
+                st.code("pip install openpyxl")
+                return pd.DataFrame()
         else:
             st.error("Format file tidak didukung. Unggah file CSV atau Excel.")
             return pd.DataFrame()
@@ -94,14 +99,17 @@ def load_data(uploaded_file):
         st.error(f"Gagal memuat data. Periksa format file Anda. Error: {e}")
         return pd.DataFrame()
 
-def process_multi_response(df, prefix_list):
+def process_multi_response(df, col_list):
     """Menggabungkan kolom multi-respon menjadi satu Series."""
     responses = pd.Series(dtype='object')
-    for col_prefix in prefix_list:
-        cols_to_combine = [col for col in df.columns if col.startswith(col_prefix) and '_' in col]
-        if not cols_to_combine: continue
-        combined_series = df[cols_to_combine].stack().dropna().reset_index(drop=True)
+    
+    # Filter kolom yang benar-benar ada di DataFrame
+    valid_cols = [col for col in col_list if col in df.columns]
+    
+    if valid_cols:
+        combined_series = df[valid_cols].stack().dropna().reset_index(drop=True)
         responses = pd.concat([responses, combined_series], ignore_index=True)
+
     return responses
 
 def calculate_likert_average(df, col_list):
@@ -194,7 +202,8 @@ if uploaded_file:
                 st.info("Kolom 'Q1_1' tidak ditemukan dalam data.")
             
             st.subheader("2. Frekuensi Unaided Awareness (Q1_1, Q2_1 - Q2_5)")
-            unaided_combined = pd.concat([df.get('Q1_1', pd.Series()).dropna(), process_multi_response(df, ['Q2'])], ignore_index=True)
+            unaided_cols = [f'Q2_{i}' for i in range(1, 6)]
+            unaided_combined = pd.concat([df.get('Q1_1', pd.Series()).dropna(), process_multi_response(df, unaided_cols)], ignore_index=True)
             if not unaided_combined.empty:
                 unaided_freq = unaided_combined.value_counts().reset_index()
                 unaided_freq.columns = ['Restoran', 'Frekuensi']
@@ -205,7 +214,8 @@ if uploaded_file:
         # --- Analisis Total Awareness ---
         with st.expander("📈 Total Awareness"):
             st.subheader("Frekuensi Total Awareness (Q3_1 - Q3_9)")
-            total_awareness_combined = process_multi_response(df, ['Q3'])
+            total_awareness_cols = [f'Q3_{i}' for i in range(1, 10)]
+            total_awareness_combined = process_multi_response(df, total_awareness_cols)
             if not total_awareness_combined.empty:
                 total_awareness_freq = total_awareness_combined.value_counts().reset_index()
                 total_awareness_freq.columns = ['Restoran', 'Frekuensi']
@@ -285,8 +295,9 @@ if uploaded_file:
                 'Sangat Tidak Penting': 1, 'Tidak Penting': 2, 'Netral': 3, 'Penting': 4, 'Sangat Penting': 5,
                 'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5
             }
+            # Perbaikan: Menggunakan .map() yang lebih aman daripada .replace()
             for col in all_likert_cols:
-                likert_df[col] = pd.to_numeric(likert_df[col].astype(str).str.strip().replace(likert_mapping), errors='coerce')
+                likert_df[col] = likert_df[col].astype(str).str.strip().map(likert_mapping)
 
             # Pemetaan nilai string untuk kolom frekuensi
             freq_mapping = {
@@ -303,8 +314,8 @@ if uploaded_file:
                 'Lebih dari 10 kali': 10.0, 'Kurang dari 1 kali': 0.5,
             }
             for col in frequency_cols:
-                likert_df[col] = pd.to_numeric(likert_df[col].astype(str).str.strip().str.lower().replace(
-                    {k.lower(): v for k, v in freq_mapping.items()}), errors='coerce')
+                likert_df[col] = likert_df[col].astype(str).str.strip().str.lower().map(
+                    {k.lower(): v for k, v in freq_mapping.items()})
             
             # Pemetaan nilai string ke numerik untuk kolom pivot 'S1' dan 'S2'
             s1_mapping = {'Laki-laki': 'Laki-laki', 'Perempuan': 'Perempuan'}
