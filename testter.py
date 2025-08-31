@@ -1,7 +1,7 @@
 # ==============================================================================
 # Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 2.9 (Perbaikan error KeyError, penambahan Word Cloud)
+# Versi: 3.0 (Perbaikan Blank Output & Peningkatan Validasi Data)
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -184,9 +184,6 @@ def calculate_frequency_average(df, col_list):
 st.markdown("<div class='main-column'>", unsafe_allow_html=True)
 st.markdown("<div class='header-title'>Dashboard Analisis Survei Restoran</div>", unsafe_allow_html=True)
 st.markdown("<div class='header-subtitle'>Analisis Mendalam dari Respon Konsumen</div>", unsafe_allow_html=True)
-
-# Placeholder untuk API key
-groq_api_key = "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"
 
 # --- Bagian Unggah File ---
 st.subheader("Unggah Data Survei Anda")
