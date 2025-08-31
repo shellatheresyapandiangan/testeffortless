@@ -211,8 +211,8 @@ if uploaded_file:
             if 'S1' in df.columns and not df['S1'].isnull().all():
                 gender_counts = df['S1'].value_counts()
                 fig_gender = px.pie(gender_counts, values=gender_counts.values, names=gender_counts.index,
-                                    title='Distribusi Jenis Kelamin', hole=0.3,
-                                    color_discrete_sequence=px.colors.sequential.YlGnBu_r)
+                                     title='Distribusi Jenis Kelamin', hole=0.3,
+                                     color_discrete_sequence=px.colors.sequential.YlGnBu_r)
                 st.plotly_chart(fig_gender, use_container_width=True)
             else:
                 st.info("Kolom 'S1' (Jenis Kelamin) tidak ditemukan atau tidak memiliki data.")
@@ -221,9 +221,9 @@ if uploaded_file:
             if 'S2' in df.columns and not df['S2'].isnull().all():
                 age_counts = df['S2'].value_counts().sort_index()
                 fig_age = px.bar(age_counts, x=age_counts.index, y=age_counts.values,
-                                 title='Distribusi Kelompok Usia',
-                                 labels={'x': 'Kelompok Usia', 'y': 'Jumlah Responden'},
-                                 color=age_counts.values, color_continuous_scale=px.colors.sequential.YlGnBu)
+                                     title='Distribusi Kelompok Usia',
+                                     labels={'x': 'Kelompok Usia', 'y': 'Jumlah Responden'},
+                                     color=age_counts.values, color_continuous_scale=px.colors.sequential.YlGnBu)
                 st.plotly_chart(fig_age, use_container_width=True)
             else:
                 st.info("Kolom 'S2' (Kelompok Usia) tidak ditemukan atau tidak memiliki data.")
@@ -286,9 +286,9 @@ if uploaded_file:
             if not freq_avg_df.empty:
                 st.dataframe(freq_avg_df)
                 fig_freq = px.bar(freq_avg_df, x=freq_avg_df.index, y='Rata-rata (Mingguan)',
-                                  title='Rata-rata Frekuensi Kunjungan (Mingguan)',
-                                  color='Rata-rata (Mingguan)',
-                                  color_continuous_scale=px.colors.sequential.YlGnBu)
+                                     title='Rata-rata Frekuensi Kunjungan (Mingguan)',
+                                     color='Rata-rata (Mingguan)',
+                                     color_continuous_scale=px.colors.sequential.YlGnBu)
                 st.plotly_chart(fig_freq, use_container_width=True)
             else:
                 st.info("Tidak ada data yang lengkap untuk analisis frekuensi kunjungan.")
@@ -307,7 +307,7 @@ if uploaded_file:
             if not likert_avg_df_1.empty:
                 st.dataframe(likert_avg_df_1)
                 fig_likert_1 = px.bar(likert_avg_df_1, x='Rata-rata', y=likert_avg_df_1.index,
-                                    title='Rata-rata Skor Kepuasan', orientation='h', color='Rata-rata', color_continuous_scale=px.colors.sequential.YlGnBu)
+                                      title='Rata-rata Skor Kepuasan', orientation='h', color='Rata-rata', color_continuous_scale=px.colors.sequential.YlGnBu)
                 fig_likert_1.update_yaxes(autorange="reversed")
                 st.plotly_chart(fig_likert_1, use_container_width=True)
             else: st.info("Tidak ada data yang lengkap untuk analisis Kepuasan.")
@@ -319,7 +319,7 @@ if uploaded_file:
             if not likert_avg_df_2.empty:
                 st.dataframe(likert_avg_df_2)
                 fig_likert_2 = px.bar(likert_avg_df_2, x='Rata-rata', y=likert_avg_df_2.index,
-                                    title='Rata-rata Skor Penilaian', orientation='h', color='Rata-rata', color_continuous_scale=px.colors.sequential.YlGnBu)
+                                      title='Rata-rata Skor Penilaian', orientation='h', color='Rata-rata', color_continuous_scale=px.colors.sequential.YlGnBu)
                 fig_likert_2.update_yaxes(autorange="reversed")
                 st.plotly_chart(fig_likert_2, use_container_width=True)
             else: st.info("Tidak ada data yang lengkap untuk analisis Penilaian.")
@@ -331,7 +331,7 @@ if uploaded_file:
             if not likert_avg_df_3.empty:
                 st.dataframe(likert_avg_df_3)
                 fig_likert_3 = px.bar(likert_avg_df_3, x='Rata-rata', y=likert_avg_df_3.index,
-                                    title='Rata-rata Skor Persetujuan', orientation='h', color='Rata-rata', color_continuous_scale=px.colors.sequential.YlGnBu)
+                                      title='Rata-rata Skor Persetujuan', orientation='h', color='Rata-rata', color_continuous_scale=px.colors.sequential.YlGnBu)
                 fig_likert_3.update_yaxes(autorange="reversed")
                 st.plotly_chart(fig_likert_3, use_container_width=True)
             else: st.info("Tidak ada data yang lengkap untuk analisis Persetujuan.")
