@@ -231,7 +231,7 @@ if uploaded_file:
             
             # Perbaikan: Menggunakan .replace() dan to_numeric untuk konversi yang lebih aman
             for col in all_likert_cols:
-                likert_df[col] = likert_df[col].replace(mapping).astype(float)
+                likert_df[col] = pd.to_numeric(likert_df[col].replace(mapping), errors='coerce')
 
             # Perbaikan: Pastikan kolom pivot_col adalah numerik sebelum digunakan
             if 'S1' in likert_df.columns:
