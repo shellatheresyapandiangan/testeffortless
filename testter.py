@@ -1,7 +1,7 @@
 # ==============================================================================
 # Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 3.4 (Penambahan Visualisasi Baru)
+# Versi: 3.5 (Penambahan Analisis Likert & Multi-respon)
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -183,6 +183,15 @@ def calculate_frequency_average(df, col_list):
         return pd.DataFrame.from_dict(averages, orient='index', columns=['Rata-rata (Mingguan)']).sort_index()
     return pd.DataFrame()
 
+def calculate_multiselect_counts(df, col_name, separator=';'):
+    """Menghitung frekuensi pilihan dari kolom multi-respon."""
+    if col_name in df.columns:
+        # Gabungkan semua string, pisahkan, dan hitung frekuensinya
+        all_options = df[col_name].dropna().astype(str).str.split(separator).explode().str.strip()
+        counts = all_options.value_counts()
+        return counts
+    return pd.Series(dtype='object')
+
 
 # --- 4. Logika Utama Aplikasi ---
 st.markdown("<div class='main-column'>", unsafe_allow_html=True)
@@ -224,9 +233,63 @@ if uploaded_file:
                                  color=age_counts.values, color_continuous_scale=px.colors.sequential.YlGnBu)
                 st.plotly_chart(fig_age, use_container_width=True)
 
+        # --- Analisis Skala Likert ---
+        with st.expander("⭐ Analisis Skala Likert", expanded=False):
+            st.subheader("Rata-rata Skor Skala Likert")
+            st.info("Edit kode untuk menyesuaikan nama kolom Likert Anda. Contoh: 'S7_1', 'S8_2'.")
+            
+            # Contoh daftar kolom Likert. Sesuaikan dengan data Anda.
+            likert_cols = [f'S7_{i}' for i in range(1, 10)] + [f'S8_{i}' for i in range(1, 8)]
+            likert_avg_df = calculate_likert_average(df, likert_cols)
+
+            if not likert_avg_df.empty:
+                st.write("Skor Rata-rata:")
+                st.dataframe(likert_avg_df)
+
+                fig_likert = px.bar(likert_avg_df, x='Rata-rata', y=likert_avg_df.index,
+                                    title='Rata-rata Skor Berdasarkan Skala Likert',
+                                    labels={'x': 'Rata-rata Skor', 'y': 'Pernyataan Survei'},
+                                    orientation='h',
+                                    color='Rata-rata',
+                                    color_continuous_scale=px.colors.sequential.YlGnBu)
+                fig_likert.update_yaxes(autorange="reversed")
+                st.plotly_chart(fig_likert, use_container_width=True)
+            else:
+                st.info("Tidak ada data yang lengkap untuk analisis skala Likert. Pastikan nama kolom Anda benar.")
+
+        # --- Analisis Multi-respon (Multi-select) ---
+        with st.expander("🔗 Analisis Multi-respon", expanded=False):
+            st.subheader("Analisis Jawaban Multi-respon")
+            
+            multi_select_col = st.text_input(
+                "Masukkan nama kolom multi-respon (misal: 'S5_multi' atau 'Jenis Promosi'):",
+                placeholder="nama_kolom_multi"
+            )
+
+            if multi_select_col:
+                if multi_select_col in df.columns:
+                    counts = calculate_multiselect_counts(df, multi_select_col)
+                    
+                    if not counts.empty:
+                        st.write("Frekuensi Pilihan:")
+                        st.dataframe(counts)
+                        
+                        fig_multi = px.bar(counts, x=counts.index, y=counts.values,
+                                          title=f'Frekuensi Pilihan di Kolom "{multi_select_col}"',
+                                          labels={'x': 'Pilihan', 'y': 'Frekuensi'},
+                                          color=counts.values,
+                                          color_continuous_scale=px.colors.sequential.YlGnBu)
+                        st.plotly_chart(fig_multi, use_container_width=True)
+                    else:
+                        st.info(f"Kolom '{multi_select_col}' tidak berisi data yang valid.")
+                else:
+                    st.error(f"Kolom '{multi_select_col}' tidak ditemukan dalam data Anda.")
+            else:
+                st.info("Masukkan nama kolom untuk memulai analisis multi-respon.")
+
 
         # --- Analisis Frekuensi Utama (S9_x, S10_x, S11_x, S12_x) ---
-        with st.expander("📈 Rata-rata Frekuensi Kunjungan", expanded=True):
+        with st.expander("📈 Rata-rata Frekuensi Kunjungan", expanded=False):
             st.subheader("Rata-rata Frekuensi (Mingguan)")
             
             # Perbandingan Frekuensi Sebelum vs. Saat Ini (S9 vs S10)
