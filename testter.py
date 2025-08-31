@@ -12,6 +12,7 @@ import seaborn as sns
 from wordcloud import WordCloud
 import re
 import numpy as np
+import io
 
 # --- 2. Konfigurasi Halaman & Desain (CSS) ---
 st.set_page_config(
@@ -78,8 +79,22 @@ st.markdown("""
 
 # --- 3. Fungsi-fungsi Bantuan ---
 @st.cache_data
-def load_data(url=""):
-    try:
+def load_data(uploaded_file=None):
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
+            elif uploaded_file.name.endswith(('.xls', '.xlsx')):
+                df = pd.read_excel(uploaded_file)
+            else:
+                st.error("Tipe file tidak didukung. Unggah file CSV atau Excel.")
+                return pd.DataFrame()
+            return df
+        except Exception as e:
+            st.error(f"Gagal memuat data dari file. Error: {e}")
+            return pd.DataFrame()
+    else:
+        # Data demo jika tidak ada file yang diunggah
         cols = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9_1', 'S9_2', 'S9_3', 'S9_4', 'S9_5', 'S9_6', 'S10_1', 'S10_2', 'S10_3', 'S10_4', 'S10_5', 'S10_6', 'S11_1', 'S11_2', 'S11_3', 'S11_4', 'S11_5', 'S11_6', 'S11_7', 'S12_1', 'S12_2', 'S13', 'S14', 'S15_1', 'S15_2', 'S15_3', 'S15_4', 'Q1_1', 'Q2_1', 'Q2_2', 'Q2_3', 'Q2_4', 'Q2_5', 'Q3_1', 'Q3_2', 'Q3_3', 'Q3_4', 'Q3_5', 'Q3_6', 'Q3_7', 'Q3_8', 'Q3_9', 'Q4_1', 'Q4_2', 'Q4_3', 'Q4_4', 'Q4_5', 'Q4_6', 'Q4_7', 'Q4_8', 'Q4_9', 'Q5', 'Q6_1', 'Q6_2', 'Q6_3', 'Q7_1', 'Q7_2', 'Q7_3', 'Q7_4', 'Q7_5', 'Q7_6', 'Q7_7', 'Q7_8', 'Q7_9', 'Q7_10', 'Q7_11', 'Q7_12', 'Q7_13', 'Q7_14', 'Q7_15', 'Q8', 'Q9_1', 'Q9_2', 'Q9_3', 'Q9_4', 'Q9_5', 'Q9_6', 'Q9_7', 'Q9_8', 'Q9_9', 'Q9_10', 'Q9_11', 'Q9_12', 'Q9_13', 'Q9_14', 'Q9_15', 'Q9_16', 'Q10_1', 'Q10_2', 'Q10_3', 'Q10_4', 'Q10_5', 'Q10_6', 'Q10_7', 'Q10_8', 'Q10_9', 'Q10_10', 'Q10_11', 'Q10_12', 'Q10_13', 'Q10_14', 'Q10_15', 'Q10_16', 'Q11', 'Q12_1', 'Q12_2', 'Q12_3', 'Q13_1', 'Q13_2', 'Q13_3', 'Q13_4', 'Q13_5', 'Q13_6', 'Q13_7', 'Q13_8', 'Q13_9', 'Q13_10', 'Q13_11', 'Q13_12', 'Q13_13', 'Q13_14', 'Q13_15', 'Q14', 'Q15_1', 'Q15_2', 'Q15_3', 'Q15_4', 'Q15_5', 'Q15_6', 'Q15_7', 'Q15_8', 'Q16_1', 'Q16_2', 'Q16_3', 'Q16_4', 'Q17_1', 'Q17_2', 'Q17_3', 'Q18', 'Q19_1', 'Q19_2', 'Q19_3', 'Q19_4', 'Q19_5', 'Q20_1', 'Q20_2', 'Q20_3', 'Q20_4', 'Q21_1', 'Q21_2', 'Q21_3', 'Q23', 'Q24_1', 'Q24_2', 'Q24_3', 'Q24_4', 'Q24_5', 'Q25_1', 'Q25_2', 'Q26_1', 'Q26_2', 'Q26_3', 'Q26_4', 'Q27_1', 'Q27_2', 'Q27_3', 'Q28_1', 'Q28_2', 'Q29', 'Q30_1', 'Q30_2', 'Q30_3', 'Q30_4', 'Q30_5', 'Q30_6', 'Q30_7', 'Q30_8', 'Q30_9', 'Q30_10', 'Q31', 'Q32_1', 'Q32_2', 'Q32_3', 'Q32_4', 'Q32_5', 'Q32_6', 'Q32_7', 'Q32_8', 'Q32_9', 'Q32_10', 'Q33', 'Q34_1', 'Q34_2', 'Q34_3', 'Q34_4', 'Q34_5', 'Q34_6', 'Q34_7', 'Q34_8', 'Q34_9', 'Q34_10', 'Q34_11', 'Q34_12', 'Q34_13', 'Q34_14', 'Q34_15', 'Q34_16', 'Q35_1', 'Q35_2', 'Q35_3', 'Q35_4', 'Q35_5', 'Q35_6', 'Q36_1', 'Q36_2', 'Q36_3', 'Q36_4', 'Q36_5', 'Q36_6', 'Q37_1', 'Q37_2', 'Q37_3', 'Q37_4', 'Q37_5', 'Q37_6', 'Q37_7', 'Q37_8', 'Q37_9', 'Q37_10', 'Name', 'Company', 'Address', 'Address 2', 'City/Town', 'State/Province', 'ZIP/Postal Code', 'Country', 'Email Address', 'Phone Number']
         data = {
             'S1': ['Laki-laki', 'Perempuan'] * 50,
@@ -152,9 +167,6 @@ def load_data(url=""):
         
         df = pd.DataFrame(data)
         return df[cols]
-    except Exception as e:
-        st.error(f"Gagal memuat data. Error: {e}")
-        return pd.DataFrame()
 
 def process_multi_response(df, prefix_list):
     responses = pd.Series(dtype='object')
@@ -181,13 +193,15 @@ def calculate_likert_average(df, col_list):
     return pd.DataFrame.from_dict(averages, orient='index', columns=['Rata-rata']).sort_index()
 
 # --- 4. Logika Utama Aplikasi ---
-st.markdown("<div class='main-column'>", unsafe_allow_html=True)
-st.markdown("<div class='header-title'>Dashboard Analisis Survei Restoran</div>", unsafe_allow_html=True)
-st.markdown("<div class='header-subtitle'>Analisis Mendalam dari Respon Konsumen</div>", unsafe_allow_html=True)
+st.sidebar.title("Opsi Data")
+uploaded_file = st.sidebar.file_uploader("Unggah file survei Anda (CSV atau XLSX)", type=['csv', 'xlsx'])
 
-df = load_data()
+df = load_data(uploaded_file)
 
 if not df.empty:
+    st.markdown("<div class='main-column'>", unsafe_allow_html=True)
+    st.markdown("<div class='header-title'>Dashboard Analisis Survei Restoran</div>", unsafe_allow_html=True)
+    st.markdown("<div class='header-subtitle'>Analisis Mendalam dari Respon Konsumen</div>", unsafe_allow_html=True)
     
     # --- Analisis Top of Mind & Unaided Awareness ---
     with st.expander("📊 Frekuensi & Persentase (Top of Mind & Unaided)", expanded=True):
@@ -357,4 +371,6 @@ if not df.empty:
         else:
             st.info("Kolom yang dipilih tidak ditemukan dalam data.")
 
-st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+else:
+    st.info("Silakan unggah file data atau gunakan data demo yang telah disediakan.")
