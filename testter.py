@@ -1,7 +1,7 @@
 # ==============================================================================
 # Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 2.8 (Perbaikan error KeyError & ValueError)
+# Versi: 2.9 (Perbaikan error KeyError, penambahan Word Cloud)
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -353,6 +353,7 @@ if uploaded_file:
             all_likert_cols = importance_cols + satisfaction_cols + agreement_cols
             frequency_cols = [f'S{i}_{j}' for i in range(9, 13) for j in range(1, 8)] + ['S13', 'S14']
             
+            # Filter kolom yang benar-benar ada di DataFrame
             all_numeric_cols = [col for col in all_likert_cols + frequency_cols if col in df.columns]
             
             likert_df = df.copy()
@@ -404,6 +405,7 @@ if uploaded_file:
             else:
                 pivot_col = 'S2'
             
+            # Pengecekan baru untuk memastikan kolom pivot ada dan tidak kosong
             if pivot_col in likert_df.columns and not likert_df[pivot_col].isnull().all() and all_numeric_cols:
                 pivot_table = likert_df.groupby(pivot_col)[all_numeric_cols].mean()
                 
@@ -426,6 +428,42 @@ if uploaded_file:
                 
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.info(f"Kolom pivot '{pivot_col}' tidak ditemukan, atau tidak ada data numerik untuk dianalisis.")
+                st.info(f"Kolom pivot '{pivot_col}' tidak ditemukan atau tidak memiliki data yang relevan.")
+
+
+        # --- Analisis Open-Ended (Word Cloud) ---
+        with st.expander("☁️ Analisis Teks Terbuka (Word Cloud)"):
+            open_ended_cols = [f'Q{i}' for i in range(14, 15)] + [f'Q{i}_1' for i in range(10, 14)] + ['S11_8']
+            open_ended_valid_cols = [col for col in open_ended_cols if col in df.columns]
+
+            if open_ended_valid_cols:
+                st.subheader("Word Cloud dari Jawaban Terbuka")
+                selected_text_col = st.selectbox("Pilih kolom teks:", options=open_ended_valid_cols)
+                
+                if selected_text_col and not df[selected_text_col].isnull().all():
+                    all_text = ' '.join(df[selected_text_col].astype(str).str.lower().dropna())
+                    
+                    # Bersihkan teks dari kata-kata umum (stopwords) dan karakter khusus
+                    stopwords = set(['dan', 'atau', 'di', 'dari', 'yang', 'untuk', 'dengan', 'sangat'])
+                    cleaned_text = " ".join([word for word in all_text.split() if word not in stopwords and len(word) > 2])
+
+                    if cleaned_text:
+                        wordcloud = WordCloud(
+                            width=800, height=400, 
+                            background_color='white', 
+                            colormap='Blues',
+                            max_words=100
+                        ).generate(cleaned_text)
+                        
+                        fig, ax = plt.subplots()
+                        ax.imshow(wordcloud, interpolation='bilinear')
+                        ax.axis("off")
+                        st.pyplot(fig)
+                    else:
+                        st.warning("Tidak ada teks yang cukup untuk membuat Word Cloud.")
+                else:
+                    st.info("Kolom yang dipilih tidak memiliki data teks.")
+            else:
+                st.info("Tidak ada kolom teks untuk dianalisis.")
 
 st.markdown("</div>", unsafe_allow_html=True)
