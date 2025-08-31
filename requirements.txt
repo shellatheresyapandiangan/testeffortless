@@ -1,0 +1,8 @@
+# --- requirements.txt untuk Smper.ai v1.0 ---
+streamlit==1.35.0
+langchain==0.2.5
+langchain-groq==0.1.5
+PyPDF2==3.0.1
+python-docx==1.1.2
+beautifulsoup4==4.12.3
+requests==2.32.3
