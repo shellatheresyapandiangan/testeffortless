@@ -1,7 +1,7 @@
 # ==============================================================================
 # Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 3.6 (Perbaikan bug st.set_page_config)
+# Versi: 3.7 (Perbaikan bug ValueError, KeyError, dan peningkatan stabilitas)
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -16,7 +16,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # --- 2. Konfigurasi Halaman & Desain (CSS) ---
-# Perbaikan: st.set_page_config() HARUS menjadi perintah Streamlit pertama
+# st.set_page_config() HARUS menjadi perintah Streamlit pertama
 st.set_page_config(
     page_title="Dashboard Analisis Survei Restoran",
     page_icon="📊",
@@ -333,7 +333,7 @@ if uploaded_file:
                 fig_likert_2.update_yaxes(autorange="reversed")
                 st.plotly_chart(fig_likert_2, use_container_width=True)
             else:
-                st.info("Tidak ada data yang lengkap untuk analisis Penilaian (Q20-Q24).")
+                st.info("Tidak ada data yang lengkap untuk analisis Penilaian (Q20-24).")
 
             # Likert Q25-Q28
             st.markdown("#### Persetujuan (Q25-Q28)")
@@ -356,9 +356,9 @@ if uploaded_file:
         # --- Conceptual Mapping (Crosstab) ---
         with st.expander("🗺️ Pemetaan Konseptual (Tabel Silang)"):
             st.subheader("Tabel Silang (Crosstab) & Visualisasi")
-            st.write("Pilih 2 parameter untuk membuat tabel silang.")
+            st.write("Pilih 2 parameter untuk membuat tabel silang. Data yang akan digunakan adalah dari Skala Likert dan Frekuensi.")
             
-            # Contoh daftar kolom yang relevan untuk crosstab
+            # Perbaikan: Menggabungkan semua kolom yang relevan untuk crosstab
             likert_cols = [f'Q{i}_{j}' for i in range(16, 29) for j in range(1, 6)]
             frequency_cols = [f'S{i}_{j}' for i in range(9, 13) for j in range(1, 8)] + ['S13', 'S14']
             all_cols = [col for col in df.columns if col in likert_cols or col in frequency_cols]
