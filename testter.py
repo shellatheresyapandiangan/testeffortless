@@ -225,8 +225,10 @@ if uploaded_file:
                 'Sangat Tidak Penting': 1, 'Tidak Penting': 2, 'Netral': 3, 'Penting': 4, 'Sangat Penting': 5,
                 'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5
             }
+            
+            # Perbaikan: Menggunakan .replace() dan to_numeric untuk konversi yang lebih aman
             for col in all_likert_cols:
-                likert_df[col] = likert_df[col].replace(mapping)
+                likert_df[col] = likert_df[col].replace(mapping).astype(float)
                 
             pivot_options = ["Jenis Kelamin (S1)", "Usia (S2)"]
             selected_pivot = st.selectbox("Pilih Parameter Pivot:", options=pivot_options)
