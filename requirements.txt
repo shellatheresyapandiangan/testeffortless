@@ -11,3 +11,8 @@ pandas
 matplotlib
 wordcloud
 langchain-groq
+streamlit
+pandas
+matplotlib
+wordcloud
+openpyxl
