@@ -1,7 +1,7 @@
 # ==============================================================================
-# Dashboard Analisis Surveii Restoran
+# Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 3.8 (Disesuaikan untuk struktur data baru)
+# Versi: 4.0 (Disesuaikan untuk struktur data yang lebih lengkap)
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -127,13 +127,8 @@ def process_multi_response(df, col_list):
 
     return responses
 
-def calculate_likert_average(df, col_list):
+def calculate_likert_average(df, col_list, mapping):
     """Menghitung rata-rata untuk skala Likert dengan konversi numerik."""
-    mapping = {
-        'Sangat Tidak Setuju': 1, 'Tidak Setuju': 2, 'Netral': 3, 'Setuju': 4, 'Sangat Setuju': 5,
-        'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5,
-        'Sangat Tidak Penting': 1, 'Tidak Penting': 2, 'Netral': 3, 'Penting': 4, 'Sangat Penting': 5
-    }
     averages = {}
     for col in col_list:
         if col in df.columns:
@@ -246,16 +241,6 @@ if uploaded_file:
                 st.plotly_chart(fig_total, use_container_width=True)
             else: st.info("Tidak ada data yang lengkap untuk Total Awareness.")
 
-            # Frekuensi Brand Image (Q15_1-Q15_8)
-            st.markdown("#### Brand Image")
-            brand_image_cols = [f'Q15_{i}' for i in range(1, 9)]
-            brand_image_df = calculate_multiselect_counts(df, brand_image_cols)
-            if not brand_image_df.empty:
-                st.dataframe(brand_image_df, use_container_width=True)
-                fig_brand = px.bar(brand_image_df, x='Respons', y='Frekuensi', title='Frekuensi Brand Image', color='Frekuensi', color_continuous_scale=px.colors.sequential.YlGnBu)
-                st.plotly_chart(fig_brand, use_container_width=True)
-            else: st.info("Tidak ada data yang lengkap untuk Brand Image.")
-
             # Frekuensi Kunjungan Restoran Umum (Q4_1-Q4_9)
             st.markdown("#### Restoran yang Dikunjungi (6 Bulan Terakhir)")
             visited_rest_cols = [f'Q4_{i}' for i in range(1, 10)]
@@ -297,10 +282,17 @@ if uploaded_file:
             else:
                 st.info("Tidak ada data yang lengkap untuk analisis frekuensi kunjungan.")
 
-            # Analisis Likert Kepuasan (Q16-Q19)
-            st.markdown("#### Rata-rata Skor Kepuasan (Q16-Q19)")
-            likert_cols_1 = [f'Q{i}_{j}' for i in range(16, 20) for j in range(1, 6)]
-            likert_avg_df_1 = calculate_likert_average(df, likert_cols_1)
+            # Mapping Skala Likert
+            likert_mapping = {
+                'Sangat Tidak Setuju': 1, 'Tidak Setuju': 2, 'Netral': 3, 'Setuju': 4, 'Sangat Setuju': 5,
+                'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5,
+                'Sangat Tidak Penting': 1, 'Tidak Penting': 2, 'Netral': 3, 'Penting': 4, 'Sangat Penting': 5
+            }
+            
+            # Analisis Likert Kepuasan (Q16-Q17, Q20-Q21)
+            st.markdown("#### Rata-rata Skor Kepuasan (Q16-Q17, Q20-Q21)")
+            likert_cols_1 = [f'Q{i}_{j}' for i in [16,17,20,21] for j in range(1, 4)]
+            likert_avg_df_1 = calculate_likert_average(df, likert_cols_1, likert_mapping)
             if not likert_avg_df_1.empty:
                 st.dataframe(likert_avg_df_1)
                 fig_likert_1 = px.bar(likert_avg_df_1, x='Rata-rata', y=likert_avg_df_1.index,
@@ -309,10 +301,10 @@ if uploaded_file:
                 st.plotly_chart(fig_likert_1, use_container_width=True)
             else: st.info("Tidak ada data yang lengkap untuk analisis Kepuasan.")
 
-            # Analisis Likert Penilaian (Q20-Q24)
-            st.markdown("#### Rata-rata Skor Penilaian (Q20-Q24)")
-            likert_cols_2 = [f'Q{i}_{j}' for i in range(20, 25) for j in range(1, 6)]
-            likert_avg_df_2 = calculate_likert_average(df, likert_cols_2)
+            # Analisis Likert Penilaian (Q24_1-Q24_5, Q25_1-Q25_2, Q26_1-Q26_4)
+            st.markdown("#### Rata-rata Skor Penilaian (Q24-Q26)")
+            likert_cols_2 = [f'Q24_{i}' for i in range(1, 6)] + [f'Q25_{i}' for i in range(1, 3)] + [f'Q26_{i}' for i in range(1, 5)]
+            likert_avg_df_2 = calculate_likert_average(df, likert_cols_2, likert_mapping)
             if not likert_avg_df_2.empty:
                 st.dataframe(likert_avg_df_2)
                 fig_likert_2 = px.bar(likert_avg_df_2, x='Rata-rata', y=likert_avg_df_2.index,
@@ -321,10 +313,10 @@ if uploaded_file:
                 st.plotly_chart(fig_likert_2, use_container_width=True)
             else: st.info("Tidak ada data yang lengkap untuk analisis Penilaian.")
 
-            # Analisis Likert Persetujuan (Q25-Q28)
-            st.markdown("#### Rata-rata Skor Persetujuan (Q25-Q28)")
-            likert_cols_3 = [f'Q{i}_{j}' for i in range(25, 29) for j in range(1, 3)]
-            likert_avg_df_3 = calculate_likert_average(df, likert_cols_3)
+            # Analisis Likert Persetujuan (Q27-Q28)
+            st.markdown("#### Rata-rata Skor Persetujuan (Q27-Q28)")
+            likert_cols_3 = [f'Q27_{i}' for i in range(1, 4)] + [f'Q28_{i}' for i in range(1, 3)]
+            likert_avg_df_3 = calculate_likert_average(df, likert_cols_3, likert_mapping)
             if not likert_avg_df_3.empty:
                 st.dataframe(likert_avg_df_3)
                 fig_likert_3 = px.bar(likert_avg_df_3, x='Rata-rata', y=likert_avg_df_3.index,
@@ -339,7 +331,8 @@ if uploaded_file:
             st.write("Pilih 2 parameter untuk membuat tabel silang. Data yang akan digunakan adalah dari Skala Likert dan Frekuensi.")
             
             # Mendefinisikan semua kolom Likert dan Frekuensi yang relevan
-            likert_cols = [f'Q{i}_{j}' for i in range(16, 29) for j in range(1, 6)] + [f'Q30_{i}' for i in range(1, 11)] + ['Q18', 'Q23']
+            likert_cols = [f'Q{i}_{j}' for i in [16,17,20,21] for j in range(1, 4)] + [f'Q24_{i}' for i in range(1, 6)] + [f'Q25_{i}' for i in range(1, 3)] + [f'Q26_{i}' for i in range(1, 5)] + [f'Q27_{i}' for i in range(1, 4)] + [f'Q28_{i}' for i in range(1, 3)] + ['Q30_1', 'Q30_2'] + [f'Q30_{i}' for i in range(1, 11)] + ['Q33'] + [f'Q34_{i}' for i in range(1, 17)] + [f'Q35_{i}' for i in range(1, 7)] + [f'Q36_{i}' for i in range(1, 7)] + [f'Q37_{i}' for i in range(1, 11)]
+            
             frequency_cols = ['S13', 'S14']
             all_cols_for_crosstab = [col for col in df.columns if col in likert_cols or col in frequency_cols]
 
@@ -411,7 +404,7 @@ if uploaded_file:
         # --- Analisis Open-Ended (Word Cloud) ---
         with st.expander("☁️ Analisis Teks Terbuka (Word Cloud)"):
             st.subheader("Word Cloud dari Jawaban Terbuka")
-            open_ended_col_list = ['Q29', 'Q1_1', 'Q5', 'Q11', 'Q14'] # Kolom yang mungkin berisi teks
+            open_ended_col_list = ['Q1_1', 'Q5', 'Q8', 'Q29', 'S15_1', 'S15_2', 'S15_3', 'S15_4']
             
             # Filter kolom yang benar-benar ada
             valid_open_ended_cols = [col for col in open_ended_col_list if col in df.columns]
