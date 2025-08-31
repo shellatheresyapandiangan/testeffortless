@@ -1,7 +1,7 @@
 # ==============================================================================
 # Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 3.1 (Perbaikan Error 'ValueError')
+# Versi: 3.2 (Perbaikan Error 'KeyError: Rata-rata')
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -137,10 +137,12 @@ def calculate_likert_average(df, col_list):
     averages = {}
     for col in col_list:
         if col in df.columns:
-            series = df[col].astype(str).str.strip().map(mapping)
+            series = df[col].astype(str).str.strip().str.title().map(mapping)
             if not series.isnull().all():
                 averages[col] = series.mean()
-    return pd.DataFrame.from_dict(averages, orient='index', columns=['Rata-rata']).sort_index()
+    if averages:
+        return pd.DataFrame.from_dict(averages, orient='index', columns=['Rata-rata']).sort_index()
+    return pd.DataFrame()
 
 def calculate_frequency_average(df, col_list):
     """Menghitung rata-rata frekuensi mingguan dari kolom teks."""
@@ -178,15 +180,14 @@ def calculate_frequency_average(df, col_list):
             )
             if not series.isnull().all():
                 averages[col] = series.mean()
-    return pd.DataFrame.from_dict(averages, orient='index', columns=['Rata-rata (Mingguan)']).sort_index()
+    if averages:
+        return pd.DataFrame.from_dict(averages, orient='index', columns=['Rata-rata (Mingguan)']).sort_index()
+    return pd.DataFrame()
 
 # --- 4. Logika Utama Aplikasi ---
 st.markdown("<div class='main-column'>", unsafe_allow_html=True)
 st.markdown("<div class='header-title'>Dashboard Analisis Survei Restoran</div>", unsafe_allow_html=True)
 st.markdown("<div class='header-subtitle'>Analisis Mendalam dari Respon Konsumen</div>", unsafe_allow_html=True)
-
-# Placeholder untuk API key
-groq_api_key = "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"
 
 # --- Bagian Unggah File ---
 st.subheader("Unggah Data Survei Anda")
