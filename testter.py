@@ -1,7 +1,7 @@
-# ==============================================================================
+\# ==============================================================================
 # Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 3.6 (Perbaikan bug st.set_page_config)
+# Versi: 1.0
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -11,12 +11,8 @@ import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 import re
 import numpy as np
-import io
-import plotly.express as px
-import plotly.graph_objects as go
 
 # --- 2. Konfigurasi Halaman & Desain (CSS) ---
-# Perbaikan: st.set_page_config() HARUS menjadi perintah Streamlit pertama
 st.set_page_config(
     page_title="Dashboard Analisis Survei Restoran",
     page_icon="📊",
@@ -76,416 +72,230 @@ st.markdown("""
         border: 1px solid #E2E8F0;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
     }
-    .stButton>button {
-        border-radius: 10px;
-        border: none;
-        background-color: #4A90E2;
-        color: white;
-        padding: 10px 20px;
-        font-weight: 600;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # --- 3. Fungsi-fungsi Bantuan ---
 @st.cache_data
-def load_data(uploaded_file):
-    """Memuat data dari file yang diunggah dan membersihkan baris kosong/tidak relevan."""
+def load_data(url=""):
+    """
+    Memuat data dari URL atau membuat data dummy jika tidak ada URL.
+    CATATAN: GANTI BAGIAN INI DENGAN DATA ANDA YANG SEBENARNYA.
+    """
     try:
-        if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file)
-        elif uploaded_file.name.endswith(('.xlsx', '.xls')):
-            try:
-                df = pd.read_excel(uploaded_file)
-            except ImportError:
-                st.error("Gagal membaca file Excel. Harap instal pustaka 'openpyxl' dengan menjalankan perintah ini:")
-                st.code("pip install openpyxl")
-                return pd.DataFrame()
-        else:
-            st.error("Format file tidak didukung. Unggah file CSV atau Excel.")
-            return pd.DataFrame()
+        # PENTING: Ganti `pd.read_csv` dengan jalur file atau URL data Anda
+        # Misalnya: df = pd.read_csv("path/ke/data_survei.csv")
+        # Saat ini menggunakan data dummy untuk demonstrasi.
         
-        # Membersihkan data dengan menghapus baris yang memiliki NaN di sebagian besar kolom
-        df.dropna(how='all', inplace=True)
-        # Menghapus baris yang berisi string panjang, kemungkinan teks pertanyaan
-        df = df[df.apply(lambda row: row.astype(str).str.len().sum() < 250, axis=1)]
+        # Kolom yang Anda berikan
+        cols = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9_1', 'S9_2', 'S9_3', 'S9_4', 'S9_5', 'S9_6', 'S10_1', 'S10_2', 'S10_3', 'S10_4', 'S10_5', 'S10_6', 'S11_1', 'S11_2', 'S11_3', 'S11_4', 'S11_5', 'S11_6', 'S11_7', 'S12_1', 'S12_2', 'S13', 'S14', 'S15_1', 'S15_2', 'S15_3', 'S15_4', 'Q1_1', 'Q2_1', 'Q2_2', 'Q2_3', 'Q2_4', 'Q2_5', 'Q3_1', 'Q3_2', 'Q3_3', 'Q3_4', 'Q3_5', 'Q3_6', 'Q3_7', 'Q3_8', 'Q3_9', 'Q4_1', 'Q4_2', 'Q4_3', 'Q4_4', 'Q4_5', 'Q4_6', 'Q4_7', 'Q4_8', 'Q4_9', 'Q5', 'Q6_1', 'Q6_2', 'Q6_3', 'Q7_1', 'Q7_2', 'Q7_3', 'Q7_4', 'Q7_5', 'Q7_6', 'Q7_7', 'Q7_8', 'Q7_9', 'Q7_10', 'Q7_11', 'Q7_12', 'Q7_13', 'Q7_14', 'Q7_15', 'Q8', 'Q9_1', 'Q9_2', 'Q9_3', 'Q9_4', 'Q9_5', 'Q9_6', 'Q9_7', 'Q9_8', 'Q9_9', 'Q9_10', 'Q9_11', 'Q9_12', 'Q9_13', 'Q9_14', 'Q9_15', 'Q9_16', 'Q10_1', 'Q10_2', 'Q10_3', 'Q10_4', 'Q10_5', 'Q10_6', 'Q10_7', 'Q10_8', 'Q10_9', 'Q10_10', 'Q10_11', 'Q10_12', 'Q10_13', 'Q10_14', 'Q10_15', 'Q10_16', 'Q11', 'Q12_1', 'Q12_2', 'Q12_3', 'Q13_1', 'Q13_2', 'Q13_3', 'Q13_4', 'Q13_5', 'Q13_6', 'Q13_7', 'Q13_8', 'Q13_9', 'Q13_10', 'Q13_11', 'Q13_12', 'Q13_13', 'Q13_14', 'Q13_15', 'Q14', 'Q15_1', 'Q15_2', 'Q15_3', 'Q15_4', 'Q15_5', 'Q15_6', 'Q15_7', 'Q15_8', 'Q16_1', 'Q16_2', 'Q16_3', 'Q16_4', 'Q17_1', 'Q17_2', 'Q17_3', 'Q18', 'Q19_1', 'Q19_2', 'Q19_3', 'Q19_4', 'Q19_5', 'Q20_1', 'Q20_2', 'Q20_3', 'Q20_4', 'Q21_1', 'Q21_2', 'Q21_3', 'Q23', 'Q24_1', 'Q24_2', 'Q24_3', 'Q24_4', 'Q24_5', 'Q25_1', 'Q25_2', 'Q26_1', 'Q26_2', 'Q26_3', 'Q26_4', 'Q27_1', 'Q27_2', 'Q27_3', 'Q28_1', 'Q28_2', 'Q29', 'Q30_1', 'Q30_2', 'Q30_3', 'Q30_4', 'Q30_5', 'Q30_6', 'Q30_7', 'Q30_8', 'Q30_9', 'Q30_10', 'Q31', 'Q32_1', 'Q32_2', 'Q32_3', 'Q32_4', 'Q32_5', 'Q32_6', 'Q32_7', 'Q32_8', 'Q32_9', 'Q32_10', 'Q33', 'Q34_1', 'Q34_2', 'Q34_3', 'Q34_4', 'Q34_5', 'Q34_6', 'Q34_7', 'Q34_8', 'Q34_9', 'Q34_10', 'Q34_11', 'Q34_12', 'Q34_13', 'Q34_14', 'Q34_15', 'Q34_16', 'Q35_1', 'Q35_2', 'Q35_3', 'Q35_4', 'Q35_5', 'Q35_6', 'Q36_1', 'Q36_2', 'Q36_3', 'Q36_4', 'Q36_5', 'Q36_6', 'Q37_1', 'Q37_2', 'Q37_3', 'Q37_4', 'Q37_5', 'Q37_6', 'Q37_7', 'Q37_8', 'Q37_9', 'Q37_10', 'Name', 'Company', 'Address', 'Address 2', 'City/Town', 'State/Province', 'ZIP/Postal Code', 'Country', 'Email Address', 'Phone Number']
         
-        return df
+        # Contoh data dummy
+        data = {
+            'S1': ['Laki-laki', 'Perempuan'] * 50,
+            'S2': ['45 - 49 tahun', '25 - 29 tahun'] * 50,
+            'S3': ['Menikah - punya anak', 'Belum menikah'] * 50,
+            'Q1_1': ['KFC', 'McD', 'HokBen', 'KFC', 'Pizza Hut'] * 20,
+            'Q2_1': ['Burger King', np.nan, 'Burger King', np.nan, 'Burger King'] * 20,
+            'Q2_2': ['Solaria', 'Solaria', np.nan, 'Solaria', np.nan] * 20,
+            'Q2_3': [np.nan, 'Sate Khas Senayan', 'Sate Khas Senayan', np.nan, 'Sate Khas Senayan'] * 20,
+            'Q2_4': ['Yoshinoya', np.nan, 'Yoshinoya', np.nan, 'Yoshinoya'] * 20,
+            'Q2_5': [np.nan] * 100,
+            'Q3_1': ['KFC', 'KFC'] * 50,
+            'Q3_2': ['McD', 'McD'] * 50,
+            'Q3_3': ['Pizza Hut', 'Pizza Hut'] * 50,
+            'Q3_4': ['HokBen', 'HokBen'] * 50,
+            'Q3_5': ['Solaria', 'Solaria'] * 50,
+            'Q3_6': [np.nan] * 100,
+            'Q3_7': [np.nan] * 100,
+            'Q3_8': [np.nan] * 100,
+            'Q3_9': [np.nan] * 100,
+            'Q15_1': ['Sangat Setuju', 'Setuju', 'Sangat Setuju', 'Netral', 'Setuju'] * 20,
+            'Q15_2': ['Setuju', 'Sangat Tidak Setuju', 'Netral', 'Setuju', 'Tidak Setuju'] * 20,
+            'Q15_3': ['Sangat Setuju', 'Sangat Setuju', 'Netral', 'Sangat Setuju', 'Netral'] * 20,
+            'Q15_4': ['Setuju', 'Netral', 'Sangat Setuju', 'Setuju', 'Sangat Tidak Setuju'] * 20,
+            'Q15_5': ['Setuju', 'Tidak Setuju', 'Netral', 'Setuju', 'Setuju'] * 20,
+            'Q15_6': ['Sangat Setuju', 'Setuju', 'Sangat Tidak Setuju', 'Setuju', 'Netral'] * 20,
+            'Q15_7': ['Setuju', 'Sangat Setuju', 'Setuju', 'Tidak Setuju', 'Sangat Setuju'] * 20,
+            'Q15_8': ['Tidak Setuju', 'Netral', 'Sangat Setuju', 'Tidak Setuju', 'Netral'] * 20,
+            'Q16_1': ['Sangat Penting', 'Penting', 'Sangat Penting', 'Netral', 'Penting'] * 20,
+            'Q16_2': ['Penting', 'Sangat Tidak Penting', 'Netral', 'Penting', 'Tidak Penting'] * 20,
+            'Q16_3': ['Sangat Penting', 'Sangat Penting', 'Netral', 'Sangat Penting', 'Netral'] * 20,
+            'Q16_4': ['Penting', 'Netral', 'Sangat Penting', 'Penting', 'Sangat Tidak Penting'] * 20,
+            'Q17_1': ['Sangat Penting', 'Tidak Penting', 'Netral', 'Sangat Penting', 'Penting'] * 20,
+            'Q17_2': ['Penting', 'Sangat Penting', 'Penting', 'Tidak Penting', 'Sangat Penting'] * 20,
+            'Q17_3': ['Sangat Tidak Penting', 'Netral', 'Sangat Penting', 'Tidak Penting', 'Netral'] * 20,
+            'Q18': ['Sangat Penting', 'Penting', 'Netral', 'Tidak Penting', 'Sangat Tidak Penting'] * 20,
+            'Q19_1': ['Sangat Penting', 'Penting', 'Sangat Penting', 'Netral', 'Penting'] * 20,
+            'Q19_2': ['Penting', 'Sangat Tidak Penting', 'Netral', 'Penting', 'Tidak Penting'] * 20,
+            'Q19_3': ['Sangat Penting', 'Sangat Penting', 'Netral', 'Sangat Penting', 'Netral'] * 20,
+            'Q19_4': ['Penting', 'Netral', 'Sangat Penting', 'Penting', 'Sangat Tidak Penting'] * 20,
+            'Q19_5': ['Sangat Penting', 'Tidak Penting', 'Netral', 'Sangat Penting', 'Penting'] * 20,
+            'Q20_1': ['Sangat Puas', 'Puas', 'Netral', 'Puas', 'Sangat Tidak Puas'] * 20,
+            'Q20_2': ['Puas', 'Tidak Puas', 'Sangat Puas', 'Puas', 'Netral'] * 20,
+            'Q20_3': ['Sangat Puas', 'Netral', 'Tidak Puas', 'Sangat Puas', 'Netral'] * 20,
+            'Q20_4': ['Tidak Puas', 'Netral', 'Sangat Puas', 'Tidak Puas', 'Netral'] * 20,
+            'Q21_1': ['Puas', 'Sangat Puas', 'Puas', 'Tidak Puas', 'Sangat Puas'] * 20,
+            'Q21_2': ['Sangat Tidak Puas', 'Tidak Puas', 'Sangat Puas', 'Tidak Puas', 'Netral'] * 20,
+            'Q21_3': ['Sangat Puas', 'Puas', 'Netral', 'Sangat Puas', 'Puas'] * 20,
+            'Q23': [1, 2, 3, 4, 5] * 20,
+            'Q24_1': ['Sangat Puas', 'Puas', 'Netral', 'Tidak Puas', 'Sangat Tidak Puas'] * 20,
+            'Q24_2': ['Sangat Puas', 'Netral', 'Sangat Tidak Puas', 'Puas', 'Netral'] * 20,
+            'Q24_3': ['Puas', 'Sangat Puas', 'Puas', 'Sangat Tidak Puas', 'Tidak Puas'] * 20,
+            'Q24_4': ['Netral', 'Tidak Puas', 'Sangat Puas', 'Netral', 'Sangat Puas'] * 20,
+            'Q24_5': ['Puas', 'Netral', 'Puas', 'Tidak Puas', 'Sangat Tidak Puas'] * 20,
+            'Q25_1': ['Sangat Setuju', 'Netral', 'Setuju', 'Sangat Setuju', 'Netral'] * 20,
+            'Q25_2': ['Setuju', 'Sangat Setuju', 'Netral', 'Sangat Tidak Setuju', 'Setuju'] * 20,
+            'Q26_1': ['Sangat Setuju', 'Netral', 'Tidak Setuju', 'Setuju', 'Sangat Tidak Setuju'] * 20,
+            'Q26_2': ['Setuju', 'Sangat Setuju', 'Netral', 'Tidak Setuju', 'Setuju'] * 20,
+            'Q26_3': ['Sangat Setuju', 'Netral', 'Setuju', 'Sangat Setuju', 'Netral'] * 20,
+            'Q26_4': ['Setuju', 'Setuju', 'Sangat Setuju', 'Netral', 'Setuju'] * 20,
+            'Q27_1': ['Sangat Setuju', 'Netral', 'Tidak Setuju', 'Setuju', 'Sangat Tidak Setuju'] * 20,
+            'Q27_2': ['Sangat Setuju', 'Netral', 'Setuju', 'Sangat Setuju', 'Netral'] * 20,
+            'Q27_3': ['Setuju', 'Sangat Setuju', 'Netral', 'Sangat Tidak Setuju', 'Setuju'] * 20,
+            'Q28_1': ['Sangat Setuju', 'Netral', 'Tidak Setuju', 'Setuju', 'Sangat Tidak Setuju'] * 20,
+            'Q28_2': ['Setuju', 'Sangat Setuju', 'Netral', 'Tidak Setuju', 'Setuju'] * 20,
+            # Tambahkan kolom lain sesuai kebutuhan, atau isi dengan NaN
+        }
+        
+        # Buat DataFrame dari data dummy
+        df = pd.DataFrame(data)
+        
+        # Tambahkan kolom yang hilang dengan NaN untuk memenuhi semua kolom yang diminta
+        missing_cols = [col for col in cols if col not in df.columns]
+        for col in missing_cols:
+            df[col] = np.nan
+        
+        return df[cols]
     except Exception as e:
-        st.error(f"Gagal memuat data. Periksa format file Anda. Error: {e}")
+        st.error(f"Gagal memuat data. Error: {e}")
         return pd.DataFrame()
 
-def process_multi_response(df, col_list):
+def process_multi_response(df, prefix_list):
     """Menggabungkan kolom multi-respon menjadi satu Series."""
     responses = pd.Series(dtype='object')
-    
-    # Filter kolom yang benar-benar ada di DataFrame
-    valid_cols = [col for col in col_list if col in df.columns]
-    
-    if valid_cols:
-        combined_series = df[valid_cols].stack().dropna().reset_index(drop=True)
+    for col_prefix in prefix_list:
+        cols_to_combine = [col for col in df.columns if col.startswith(col_prefix) and '_' in col]
+        if not cols_to_combine: continue
+        combined_series = df[cols_to_combine].stack().dropna().reset_index(drop=True)
         responses = pd.concat([responses, combined_series], ignore_index=True)
-
     return responses
 
 def calculate_likert_average(df, col_list):
     """Menghitung rata-rata untuk skala Likert dengan konversi numerik."""
     mapping = {
         'Sangat Tidak Setuju': 1, 'Tidak Setuju': 2, 'Netral': 3, 'Setuju': 4, 'Sangat Setuju': 5,
-        'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5,
-        'Sangat Tidak Penting': 1, 'Tidak Penting': 2, 'Netral': 3, 'Penting': 4, 'Sangat Penting': 5
+        'Sangat Tidak Penting': 1, 'Tidak Penting': 2, 'Netral': 3, 'Penting': 4, 'Sangat Penting': 5,
+        'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5
     }
     averages = {}
     for col in col_list:
-        if col in df.columns:
-            series = df[col].astype(str).str.strip().str.title().map(mapping)
-            if not series.isnull().all():
-                # Handling cases where some values might not be in the mapping
-                valid_values = series.dropna()
-                if not valid_values.empty:
-                    averages[col] = valid_values.mean()
-    if averages:
-        return pd.DataFrame.from_dict(averages, orient='index', columns=['Rata-rata']).sort_index()
-    return pd.DataFrame()
-
-def calculate_frequency_average(df, col_list):
-    """Menghitung rata-rata frekuensi mingguan dari kolom teks."""
-    # Konversi frekuensi ke nilai numerik rata-rata per minggu
-    mapping = {
-        'Setiap hari': 7.0,
-        'Hampir setiap hari': 6.0,
-        '4~6 kali dalam satu minggu': 5.0,
-        '2~3 kali dalam satu minggu': 2.5,
-        '1~2 kali dalam satu minggu': 1.5,
-        'Kurang dari 1 kali dalam satu minggu': 0.5,
-        'Tidak pernah': 0.0,
-        '1x dalam sebulan': 1/4.33,
-        '2x dalam sebulan': 2/4.33,
-        '3x dalam sebulan': 3/4.33,
-        '4x dalam sebulan': 4/4.33,
-        '5x dalam sebulan': 5/4.33,
-        '6x dalam sebulan': 6/4.33,
-        '5-6x dalam sebulan': 5.5/4.33,
-        '1-2 x dalam seminggu': 1.5,
-        '3-4 x dalam seminggu': 3.5,
-        '1-2x dalam seminggu': 1.5,
-        '2-3x dalam seminggu': 2.5,
-        '2x dalam sebulan': 2/4.33,
-        '4-6x dalam seminggu': 5.0,
-        '7x dalam seminggu': 7.0,
-        'Lebih dari 10 kali': 10.0, 'Kurang dari 1 kali': 0.5,
-    }
-    averages = {}
-    for col in col_list:
-        if col in df.columns:
-            series = df[col].astype(str).str.strip().str.lower().map(
-                {k.lower(): v for k, v in mapping.items()}
-            )
-            # Check if all values are NaN after mapping, if so, skip
-            if not series.isnull().all():
-                averages[col] = series.mean()
-    if averages:
-        return pd.DataFrame.from_dict(averages, orient='index', columns=['Rata-rata (Mingguan)']).sort_index()
-    return pd.DataFrame()
-
-def calculate_multiselect_counts(df, col_list):
-    """Menghitung frekuensi pilihan dari kolom multi-respon."""
-    responses = process_multi_response(df, col_list)
-    if not responses.empty:
-        # Menghapus spasi ekstra dan nilai kosong
-        responses = responses.str.strip().replace('', np.nan).dropna()
-        return responses.value_counts().reset_index().rename(columns={'index': 'Respons', 0: 'Frekuensi'})
-    return pd.DataFrame()
-
+        series = df[col].map(mapping)
+        if not series.isnull().all():
+            averages[col] = series.mean()
+    return pd.DataFrame.from_dict(averages, orient='index', columns=['Rata-rata']).sort_index()
 
 # --- 4. Logika Utama Aplikasi ---
 st.markdown("<div class='main-column'>", unsafe_allow_html=True)
 st.markdown("<div class='header-title'>Dashboard Analisis Survei Restoran</div>", unsafe_allow_html=True)
 st.markdown("<div class='header-subtitle'>Analisis Mendalam dari Respon Konsumen</div>", unsafe_allow_html=True)
 
-# --- Bagian Unggah File ---
-st.subheader("Unggah Data Survei Anda")
-uploaded_file = st.file_uploader("Pilih file CSV atau Excel Anda", type=['csv', 'xlsx', 'xls'])
+df = load_data()
 
-if uploaded_file:
-    df = load_data(uploaded_file)
+if not df.empty:
     
-    if not df.empty:
-        st.success("File berhasil diunggah!")
-        st.write("Pratinjau Data:")
-        st.dataframe(df.head())
+    # --- Analisis Top of Mind & Unaided Awareness ---
+    with st.expander("📊 Frekuensi & Persentase (Top of Mind & Unaided)", expanded=True):
+        st.subheader("1. Frekuensi Top of Mind (Q1_1)")
+        q1_freq = df['Q1_1'].value_counts().reset_index()
+        q1_freq.columns = ['Restoran', 'Frekuensi']
+        q1_freq['Persentase'] = (q1_freq['Frekuensi'] / len(df) * 100).round(2)
+        st.dataframe(q1_freq, use_container_width=True)
+
+        st.subheader("2. Frekuensi Unaided Awareness (Q1_1, Q2_1 - Q2_5)")
+        q2_cols = ['Q2_1', 'Q2_2', 'Q2_3', 'Q2_4', 'Q2_5']
+        unaided_combined = pd.concat([df['Q1_1'].dropna(), process_multi_response(df, ['Q2'])], ignore_index=True)
+        unaided_freq = unaided_combined.value_counts().reset_index()
+        unaided_freq.columns = ['Restoran', 'Frekuensi']
+        st.dataframe(unaided_freq, use_container_width=True)
+
+    # --- Analisis Total Awareness ---
+    with st.expander("📈 Total Awareness"):
+        st.subheader("Frekuensi Total Awareness (Q3_1 - Q3_9)")
+        q3_cols = ['Q3_1', 'Q3_2', 'Q3_3', 'Q3_4', 'Q3_5', 'Q3_6', 'Q3_7', 'Q3_8', 'Q3_9']
+        total_awareness_combined = process_multi_response(df, ['Q3'])
+        total_awareness_freq = total_awareness_combined.value_counts().reset_index()
+        total_awareness_freq.columns = ['Restoran', 'Frekuensi']
+        st.dataframe(total_awareness_freq, use_container_width=True)
+
+    # --- Analisis Brand Image ---
+    with st.expander("🖼️ Brand Image"):
+        st.subheader("Frekuensi Brand Image (Q15_1 - Q15_8)")
+        brand_image_cols = ['Q15_1', 'Q15_2', 'Q15_3', 'Q15_4', 'Q15_5', 'Q15_6', 'Q15_7', 'Q15_8']
+        for col in brand_image_cols:
+            if col in df.columns and not df[col].isnull().all():
+                st.markdown(f"**{col}:** {df.columns.get_loc(col)}") # Menampilkan label kolom yang relevan
+                st.dataframe(df[col].value_counts().reset_index().rename(columns={'index': 'Respons', col: 'Frekuensi'}), use_container_width=True)
+            else:
+                st.info(f"Tidak ada data untuk kolom {col}.")
+
+    # --- Analisis Skala Likert (Rata-rata) ---
+    with st.expander("📊 Rata-rata Skala Likert"):
+        # Tingkat Kepentingan (Q16_1 - Q19_5)
+        st.subheader("1. Tingkat Kepentingan (Q16_1 - Q19_5)")
+        importance_cols = [f'Q{i}_{j}' for i in range(16, 20) for j in (range(1, 6) if i in [16, 17, 19] else range(1, 6))]
+        importance_avg = calculate_likert_average(df, importance_cols)
+        st.dataframe(importance_avg, use_container_width=True)
         
-        st.markdown("<hr style='margin-top: 2rem; margin-bottom: 1.5rem; border: 1px solid #E2E8F0;'>", unsafe_allow_html=True)
-
-        # --- Analisis Demografi ---
-        with st.expander("👥 Analisis Demografi", expanded=False):
-            st.subheader("Distribusi Demografi Responden")
-            
-            # Pie Chart untuk Jenis Kelamin (S1)
-            if 'S1' in df.columns and not df['S1'].isnull().all():
-                gender_counts = df['S1'].value_counts()
-                fig_gender = px.pie(gender_counts, values=gender_counts.values, names=gender_counts.index,
-                                    title='Distribusi Jenis Kelamin', hole=0.3,
-                                    color_discrete_sequence=px.colors.sequential.YlGnBu_r)
-                st.plotly_chart(fig_gender, use_container_width=True)
-            else:
-                st.info("Kolom 'S1' (Jenis Kelamin) tidak ditemukan atau tidak memiliki data.")
-
-            # Bar Chart untuk Kelompok Usia (S2)
-            if 'S2' in df.columns and not df['S2'].isnull().all():
-                age_counts = df['S2'].value_counts().sort_index()
-                fig_age = px.bar(age_counts, x=age_counts.index, y=age_counts.values,
-                                 title='Distribusi Kelompok Usia',
-                                 labels={'x': 'Kelompok Usia', 'y': 'Jumlah Responden'},
-                                 color=age_counts.values, color_continuous_scale=px.colors.sequential.YlGnBu)
-                st.plotly_chart(fig_age, use_container_width=True)
-            else:
-                st.info("Kolom 'S2' (Kelompok Usia) tidak ditemukan atau tidak memiliki data.")
+        # Tingkat Kepuasan (Q20_1 - Q24_5)
+        st.subheader("2. Tingkat Kepuasan (Q20_1 - Q24_5)")
+        satisfaction_cols = [f'Q{i}_{j}' for i in range(20, 25) for j in (range(1, 6) if i in [20, 24] else range(1, 4))]
+        satisfaction_avg = calculate_likert_average(df, satisfaction_cols)
+        st.dataframe(satisfaction_avg, use_container_width=True)
         
-        # --- Analisis Un-aided Awareness (Q1_1-Q2_5) ---
-        with st.expander("2. Frekuensi Unaided Awareness (Q1_1, Q2_1 - Q2_5)", expanded=False):
-            st.subheader("Frekuensi Un-aided Awareness")
-            unaided_cols = ['Q1_1'] + [f'Q2_{i}' for i in range(1, 6)]
-            unaided_df = calculate_multiselect_counts(df, unaided_cols)
-            
-            if not unaided_df.empty:
-                st.dataframe(unaided_df, use_container_width=True)
-                fig_unaided = px.bar(unaided_df, x='Respons', y='Frekuensi',
-                                     title='Frekuensi Un-aided Awareness',
-                                     labels={'Respons': 'Restoran', 'Frekuensi': 'Jumlah Responden'},
-                                     color='Frekuensi',
-                                     color_continuous_scale=px.colors.sequential.YlGnBu)
-                st.plotly_chart(fig_unaided, use_container_width=True)
-            else:
-                st.info("Tidak ada data yang lengkap untuk Un-aided Awareness. Pastikan kolom 'Q1_1' dan 'Q2_1' sampai 'Q2_5' ada.")
+        # Tingkat Persesuaian (Q25_1 - Q28_2)
+        st.subheader("3. Tingkat Persesuaian (Q25_1 - Q28_2)")
+        agreement_cols = [f'Q{i}_{j}' for i in range(25, 29) for j in (range(1, 5) if i in [25, 26] else range(1, 4) if i==27 else range(1, 3))]
+        agreement_avg = calculate_likert_average(df, agreement_cols)
+        st.dataframe(agreement_avg, use_container_width=True)
 
-
-        # --- Analisis Total Awareness (Q3_1-Q3_9) ---
-        with st.expander("3. Frekuensi Total Awareness (Q3_1-Q3_9)", expanded=False):
-            st.subheader("Frekuensi Total Awareness")
-            total_awareness_cols = [f'Q3_{i}' for i in range(1, 10)]
-            total_awareness_df = calculate_multiselect_counts(df, total_awareness_cols)
-
-            if not total_awareness_df.empty:
-                st.dataframe(total_awareness_df, use_container_width=True)
-                fig_total = px.bar(total_awareness_df, x='Respons', y='Frekuensi',
-                                   title='Frekuensi Total Awareness',
-                                   labels={'Respons': 'Pilihan', 'Frekuensi': 'Jumlah Responden'},
-                                   color='Frekuensi',
-                                   color_continuous_scale=px.colors.sequential.YlGnBu)
-                st.plotly_chart(fig_total, use_container_width=True)
-            else:
-                st.info("Tidak ada data yang lengkap untuk Total Awareness. Pastikan kolom 'Q3_1' sampai 'Q3_9' ada.")
-
-
-        # --- Brand Image (Q15_1-Q15_8) ---
-        with st.expander("6. Brand Image (Q15_1-Q15_8)", expanded=False):
-            st.subheader("Frekuensi Brand Image")
-            brand_image_cols = [f'Q15_{i}' for i in range(1, 9)]
-            brand_image_df = calculate_multiselect_counts(df, brand_image_cols)
-
-            if not brand_image_df.empty:
-                st.dataframe(brand_image_df, use_container_width=True)
-                fig_brand = px.bar(brand_image_df, x='Respons', y='Frekuensi',
-                                   title='Frekuensi Brand Image',
-                                   labels={'Respons': 'Pilihan', 'Frekuensi': 'Jumlah Responden'},
-                                   color='Frekuensi',
-                                   color_continuous_scale=px.colors.sequential.YlGnBu)
-                st.plotly_chart(fig_brand, use_container_width=True)
-            else:
-                st.info("Tidak ada data yang lengkap untuk Brand Image. Pastikan kolom 'Q15_1' sampai 'Q15_8' ada.")
-
-        # --- Analisis Skala Likert ---
-        with st.expander("7. Analisis Skala Likert", expanded=False):
-            st.subheader("Rata-rata Skor Skala Likert")
-            
-            # Likert Q16-Q19
-            st.markdown("#### Kepuasan (Q16-Q19)")
-            likert_cols_1 = [f'Q{i}_{j}' for i in range(16, 20) for j in range(1, 6)]
-            likert_avg_df_1 = calculate_likert_average(df, likert_cols_1)
-            
-            if not likert_avg_df_1.empty:
-                st.dataframe(likert_avg_df_1)
-                fig_likert_1 = px.bar(likert_avg_df_1, x='Rata-rata', y=likert_avg_df_1.index,
-                                    title='Rata-rata Skor Kepuasan (Q16-Q19)',
-                                    labels={'x': 'Rata-rata Skor', 'y': 'Pernyataan Survei'},
-                                    orientation='h',
-                                    color='Rata-rata',
-                                    color_continuous_scale=px.colors.sequential.YlGnBu)
-                fig_likert_1.update_yaxes(autorange="reversed")
-                st.plotly_chart(fig_likert_1, use_container_width=True)
-            else:
-                st.info("Tidak ada data yang lengkap untuk analisis Kepuasan (Q16-Q19).")
-
-            # Likert Q20-Q24
-            st.markdown("#### Penilaian (Q20-Q24)")
-            likert_cols_2 = [f'Q{i}_{j}' for i in range(20, 25) for j in range(1, 6)]
-            likert_avg_df_2 = calculate_likert_average(df, likert_cols_2)
-            
-            if not likert_avg_df_2.empty:
-                st.dataframe(likert_avg_df_2)
-                fig_likert_2 = px.bar(likert_avg_df_2, x='Rata-rata', y=likert_avg_df_2.index,
-                                    title='Rata-rata Skor Penilaian (Q20-Q24)',
-                                    labels={'x': 'Rata-rata Skor', 'y': 'Pernyataan Survei'},
-                                    orientation='h',
-                                    color='Rata-rata',
-                                    color_continuous_scale=px.colors.sequential.YlGnBu)
-                fig_likert_2.update_yaxes(autorange="reversed")
-                st.plotly_chart(fig_likert_2, use_container_width=True)
-            else:
-                st.info("Tidak ada data yang lengkap untuk analisis Penilaian (Q20-Q24).")
-
-            # Likert Q25-Q28
-            st.markdown("#### Persetujuan (Q25-Q28)")
-            likert_cols_3 = [f'Q{i}_{j}' for i in range(25, 29) for j in range(1, 3)]
-            likert_avg_df_3 = calculate_likert_average(df, likert_cols_3)
-            
-            if not likert_avg_df_3.empty:
-                st.dataframe(likert_avg_df_3)
-                fig_likert_3 = px.bar(likert_avg_df_3, x='Rata-rata', y=likert_avg_df_3.index,
-                                    title='Rata-rata Skor Persetujuan (Q25-Q28)',
-                                    labels={'x': 'Rata-rata Skor', 'y': 'Pernyataan Survei'},
-                                    orientation='h',
-                                    color='Rata-rata',
-                                    color_continuous_scale=px.colors.sequential.YlGnBu)
-                fig_likert_3.update_yaxes(autorange="reversed")
-                st.plotly_chart(fig_likert_3, use_container_width=True)
-            else:
-                st.info("Tidak ada data yang lengkap untuk analisis Persetujuan (Q25-Q28).")
-
-        # --- Conceptual Mapping (Crosstab) ---
-        with st.expander("🗺️ Pemetaan Konseptual (Tabel Silang)"):
-            st.subheader("Tabel Silang (Crosstab) & Visualisasi")
-            st.write("Pilih 2 parameter untuk membuat tabel silang.")
-            
-            # Contoh daftar kolom yang relevan untuk crosstab
-            likert_cols = [f'Q{i}_{j}' for i in range(16, 29) for j in range(1, 6)]
-            frequency_cols = [f'S{i}_{j}' for i in range(9, 13) for j in range(1, 8)] + ['S13', 'S14']
-            all_cols = [col for col in df.columns if col in likert_cols or col in frequency_cols]
-
-            # Mengkonversi kolom Likert ke numerik
-            df_cleaned = df.copy()
-            likert_mapping = {
+    # --- Conceptual Mapping (Crosstab) ---
+    with st.expander("🗺️ Pemetaan Konseptual (Tabel Silang)"):
+        st.subheader("Tabel Silang (Crosstab)")
+        st.write("Pilih 2 parameter untuk membuat tabel silang. Data yang akan digunakan adalah dari Skala Likert.")
+        
+        # Gabungkan semua data Likert ke dalam satu DataFrame untuk kemudahan pivot
+        all_likert_cols = importance_cols + satisfaction_cols + agreement_cols
+        likert_df = df[['S1', 'S2'] + all_likert_cols].copy()
+        for col in all_likert_cols:
+            likert_df[col] = likert_df[col].replace({
                 'Sangat Tidak Setuju': 1, 'Tidak Setuju': 2, 'Netral': 3, 'Setuju': 4, 'Sangat Setuju': 5,
-                'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5,
-                'Sangat Tidak Penting': 1, 'Tidak Penting': 2, 'Netral': 3, 'Penting': 4, 'Sangat Penting': 5
-            }
-            for col in likert_cols:
-                if col in df_cleaned.columns:
-                    df_cleaned[col] = df_cleaned[col].astype(str).str.strip().str.title().map(likert_mapping)
+                'Sangat Tidak Penting': 1, 'Tidak Penting': 2, 'Netral': 3, 'Penting': 4, 'Sangat Penting': 5,
+                'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5
+            })
             
-            # Mengkonversi kolom frekuensi ke numerik
-            freq_mapping = {
-                'Setiap hari': 7.0, 'Hampir setiap hari': 6.0, '4~6 kali dalam satu minggu': 5.0,
-                '2~3 kali dalam satu minggu': 2.5, '1~2 kali dalam satu minggu': 1.5,
-                'Kurang dari 1 kali dalam satu minggu': 0.5, 'Tidak pernah': 0.0,
-            }
-            for col in frequency_cols:
-                if col in df_cleaned.columns:
-                    df_cleaned[col] = df_cleaned[col].astype(str).str.strip().str.lower().map(
-                        {k.lower(): v for k, v in freq_mapping.items()})
-
-            # Mapping untuk kolom pivot S1 dan S2
-            s1_mapping = {'Laki-laki': 'Laki-laki', 'Perempuan': 'Perempuan'}
-            s2_mapping = {
-                '15 - 19 tahun': '15-19', '20 - 24 tahun': '20-24', '25 - 29 tahun': '25-29', 
-                '30 - 34 tahun': '30-34', '35 - 39 tahun': '35-39', '40 - 44 tahun': '40-44', 
-                '45 - 49 tahun': '45-49', '50 - 54 tahun': '50-54', '>55 tahun': '>55'
-            }
-            if 'S1' in df_cleaned.columns:
-                df_cleaned['S1'] = df_cleaned['S1'].astype(str).str.strip().map(s1_mapping)
-            if 'S2' in df_cleaned.columns:
-                df_cleaned['S2'] = df_cleaned['S2'].astype(str).str.strip().map(s2_mapping)
-
-            # Pilihan kolom pivot
-            pivot_options = ["Jenis Kelamin (S1)", "Usia (S2)"]
-            selected_pivot = st.selectbox("Pilih Parameter Pivot:", options=pivot_options)
-            
-            if selected_pivot == "Jenis Kelamin (S1)":
-                pivot_col = 'S1'
-            else:
-                pivot_col = 'S2'
-
-            # Pengecekan baru untuk memastikan kolom pivot ada
-            if pivot_col in df_cleaned.columns and not df_cleaned[pivot_col].isnull().all():
-                numeric_cols_for_crosstab = [col for col in df_cleaned.columns if col in all_cols]
-                
-                if numeric_cols_for_crosstab:
-                    df_clean_for_crosstab = df_cleaned.dropna(subset=[pivot_col] + numeric_cols_for_crosstab)
-                    
-                    if not df_clean_for_crosstab.empty:
-                        pivot_table = df_clean_for_crosstab.groupby(pivot_col)[numeric_cols_for_crosstab].mean().round(2)
-                        st.write("Tabel Silang (Crosstab):")
-                        st.dataframe(pivot_table, use_container_width=True)
-                        
-                        df_heatmap = pivot_table.stack().reset_index()
-                        df_heatmap.columns = [pivot_col, 'Variabel', 'Rata-rata']
-                        
-                        fig = px.imshow(
-                            df_heatmap.pivot(index=pivot_col, columns='Variabel', values='Rata-rata'),
-                            color_continuous_scale='YlGnBu',
-                            aspect="auto",
-                            labels={'x': 'Variabel', 'y': selected_pivot, 'color': 'Rata-rata'},
-                            title='Pemetaan Rata-rata Berdasarkan Parameter Pivot'
-                        )
-                        
-                        fig.update_layout(
-                            xaxis_title='Variabel',
-                            yaxis_title=selected_pivot,
-                            xaxis_side="top"
-                        )
-                        
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        st.info(f"Tidak ada data yang valid untuk membuat tabel silang dengan kolom '{pivot_col}'.")
-                else:
-                    st.info("Tidak ada kolom numerik yang tersedia untuk analisis tabel silang.")
-            else:
-                st.info(f"Kolom pivot '{pivot_col}' tidak ditemukan atau tidak memiliki data yang relevan.")
-
-
-        # --- Analisis Open-Ended (Word Cloud) ---
-        with st.expander("☁️ Analisis Teks Terbuka (Word Cloud)"):
-            st.subheader("Word Cloud dari Jawaban Terbuka")
-            
-            # User input for the column name
-            open_ended_col = st.text_input(
-                "Masukkan nama kolom yang berisi jawaban terbuka (misal: 'Kritik dan Saran'):",
-                placeholder="nama_kolom_teks"
-            )
+        # Pilihan untuk tabel silang
+        likert_options = ["Tingkat Kepentingan", "Tingkat Kepuasan", "Tingkat Persesuaian"]
+        pivot_options = ["Jenis Kelamin (S1)", "Usia (S2)"]
         
-            if open_ended_col:
-                if open_ended_col in df.columns and not df[open_ended_col].isnull().all():
-                    # Filter out empty/NaN values
-                    text_data = df[open_ended_col].dropna().astype(str)
-                    
-                    if not text_data.empty:
-                        # Combine all text into a single string
-                        all_text = " ".join(text_data).lower()
-                        
-                        # Clean the text (remove non-alphanumeric, etc.) - simple version
-                        all_text = re.sub(r'[^a-zA-Z0-9\s]', '', all_text)
-                        
-                        # Generate the word cloud
-                        wordcloud = WordCloud(
-                            width=800, height=400,
-                            background_color='white',
-                            colormap='viridis',
-                            random_state=42
-                        ).generate(all_text)
-                        
-                        # Display the word cloud using matplotlib
-                        fig, ax = plt.subplots(figsize=(10, 5))
-                        ax.imshow(wordcloud, interpolation='bilinear')
-                        ax.axis("off")
-                        fig.patch.set_facecolor('#F8FAFC')
-                        
-                        st.pyplot(fig)
-                    else:
-                        st.info(f"Kolom '{open_ended_col}' tidak berisi data teks yang dapat dianalisis.")
-                else:
-                    st.info(f"Kolom '{open_ended_col}' tidak ditemukan atau tidak memiliki data. Harap periksa nama kolomnya.")
-            else:
-                st.info("Masukkan nama kolom teks untuk membuat Word Cloud.")
+        selected_likert = st.selectbox("Pilih Tipe Analisis:", options=likert_options)
+        selected_pivot = st.selectbox("Pilih Parameter Pivot:", options=pivot_options)
+        
+        if selected_likert == "Tingkat Kepentingan":
+            cols_to_pivot = importance_cols
+        elif selected_likert == "Tingkat Kepuasan":
+            cols_to_pivot = satisfaction_cols
+        else:
+            cols_to_pivot = agreement_cols
+        
+        # Membuat tabel silang
+        if selected_pivot == "Jenis Kelamin (S1)":
+            pivot_col = 'S1'
+        else:
+            pivot_col = 'S2'
+            
+        pivot_table = likert_df.groupby(pivot_col)[cols_to_pivot].mean().T
+        pivot_table.columns = pivot_table.columns.astype(str)
+        st.dataframe(pivot_table.style.background_gradient(cmap='viridis', axis=None).format(precision=2), use_container_width=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
