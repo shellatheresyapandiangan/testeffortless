@@ -1,7 +1,7 @@
 # ==============================================================================
 # Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 4.1 (Perbaikan koneksi API)
+# Versi: 4.3 (Menggunakan Groq API)
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -151,39 +151,41 @@ def calculate_multiselect_counts(df, col_list):
         return responses.value_counts().reset_index().rename(columns={'index': 'Respons', 0: 'Frekuensi'})
     return pd.DataFrame()
 
-def call_gemini_api_for_summary(data_str, api_key):
+def call_groq_api_for_summary(data_str):
     """
-    Memanggil API Gemini untuk menghasilkan ringkasan naratif dari data.
+    Memanggil API Groq untuk menghasilkan ringkasan naratif dari data.
     """
-    if not api_key:
-        return "Masukkan kunci API Gemini Anda untuk membuat ringkasan."
-
-    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key={api_key}"
-
-    system_prompt = "Act as a professional data analyst. Provide a concise, single-paragraph summary of the key findings from the provided survey data. Focus on top-level insights about awareness, satisfaction, and key demographic trends. Write the summary in a professional but easy-to-understand tone. The summary must be in Indonesian."
-    user_query = f"Berikut adalah ringkasan poin-poin data utama dari survei restoran. Tolong tulis ringkasan profesional dari temuan-temuan ini:\n\n{data_str}"
+    # Kunci API telah diletakkan di sini
+    api_key = "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"
+    api_url = "https://api.groq.com/openai/v1/chat/completions"
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
 
     payload = {
-        "contents": [{"parts": [{"text": user_query}]}],
-        "systemInstruction": {"parts": [{"text": system_prompt}]},
+        "messages": [
+            {"role": "system", "content": "Act as a professional data analyst. Provide a concise, single-paragraph summary of the key findings from the provided survey data. Focus on top-level insights about awareness, satisfaction, and key demographic trends. Write the summary in a professional but easy-to-understand tone. The summary must be in Indonesian."},
+            {"role": "user", "content": f"Berikut adalah ringkasan poin-poin data utama dari survei restoran. Tolong tulis ringkasan profesional dari temuan-temuan ini:\n\n{data_str}"}
+        ],
+        "model": "llama3-8b-8192",  # Model yang cepat dari Groq
     }
 
     try:
-        response = requests.post(api_url, headers={'Content-Type': 'application/json'}, json=payload)
+        response = requests.post(api_url, headers=headers, json=payload)
         response.raise_for_status() # Tangani error HTTP
 
         result = response.json()
         
-        if result and 'candidates' in result and len(result['candidates']) > 0:
-            text = result['candidates'][0]['content']['parts'][0]['text']
+        if 'choices' in result and len(result['choices']) > 0:
+            text = result['choices'][0]['message']['content']
             return text
         else:
             st.error("AI tidak dapat menghasilkan ringkasan. Respons dari API tidak valid.")
             return None
     except requests.exceptions.HTTPError as http_err:
-        if http_err.response.status_code == 400:
-            st.error("Terjadi kesalahan pada API: Permintaan tidak valid. Mohon periksa kembali data atau formatnya.")
-        elif http_err.response.status_code == 401:
+        if http_err.response.status_code == 401:
             st.error("Terjadi kesalahan pada API: Kunci API tidak valid. Mohon periksa kembali kunci yang Anda masukkan.")
         else:
             st.error(f"Terjadi kesalahan HTTP: {http_err}")
@@ -201,10 +203,6 @@ st.markdown("<div class='header-subtitle'>Analisis Mendalam dari Respon Konsumen
 st.subheader("Unggah Data Survei Anda")
 uploaded_file = st.file_uploader("Pilih file CSV atau Excel Anda", type=['csv', 'xlsx', 'xls'])
 
-# Bagian input Kunci API
-st.markdown("---")
-api_key = st.text_input("Masukkan Kunci API Gemini Anda di sini", type="password")
-
 if uploaded_file:
     df = load_data(uploaded_file)
     
@@ -214,36 +212,34 @@ if uploaded_file:
         # --- Bagian Ringkasan AI ---
         st.markdown("---")
         st.subheader("Ringkasan Analisis oleh AI")
-        if not api_key:
-            st.warning("Masukkan kunci API Anda di atas untuk melihat ringkasan AI.")
-        else:
-            with st.spinner("Harap tunggu sebentar, AI sedang menganalisis dan membuat ringkasan..."):
-                # Kumpulkan ringkasan data untuk AI
-                top_of_mind_summary = df['Q1_1'].value_counts().to_string()
-                unaided_summary = calculate_multiselect_counts(df, [f'Q2_{i}' for i in range(1, 6)]).to_string()
-                total_awareness_summary = calculate_multiselect_counts(df, [f'Q3_{i}' for i in range(1, 10)]).to_string()
-                
-                likert_mapping_satisfaction = {'Sangat Puas': 5, 'Puas': 4, 'Cukup Puas': 3, 'Kurang Puas': 2, 'Sangat Tidak Puas': 1}
-                satisfaction_cols = [f'Q{i}_{j}' for i in range(20, 25) for j in range(1, 6) if f'Q{i}_{j}' in df.columns]
-                satisfaction_summary = calculate_likert_average(df, satisfaction_cols, likert_mapping_satisfaction).to_string()
-                
-                full_summary_data = f"""
-                Top of Mind Awareness (Q1_1):
-                {top_of_mind_summary}
-                
-                Unaided Awareness (Q2_1-Q2_5):
-                {unaided_summary}
-                
-                Total Awareness (Q3_1-Q3_9):
-                {total_awareness_summary}
-                
-                Rata-rata Tingkat Kepuasan (Q20-Q24):
-                {satisfaction_summary}
-                """
+        
+        with st.spinner("Harap tunggu sebentar, AI sedang menganalisis dan membuat ringkasan..."):
+            # Kumpulkan ringkasan data untuk AI
+            top_of_mind_summary = df['Q1_1'].value_counts().to_string()
+            unaided_summary = calculate_multiselect_counts(df, [f'Q2_{i}' for i in range(1, 6)]).to_string()
+            total_awareness_summary = calculate_multiselect_counts(df, [f'Q3_{i}' for i in range(1, 10)]).to_string()
+            
+            likert_mapping_satisfaction = {'Sangat Puas': 5, 'Puas': 4, 'Cukup Puas': 3, 'Kurang Puas': 2, 'Sangat Tidak Puas': 1}
+            satisfaction_cols = [f'Q{i}_{j}' for i in range(20, 25) for j in range(1, 6) if f'Q{i}_{j}' in df.columns]
+            satisfaction_summary = calculate_likert_average(df, satisfaction_cols, likert_mapping_satisfaction).to_string()
+            
+            full_summary_data = f"""
+            Top of Mind Awareness (Q1_1):
+            {top_of_mind_summary}
+            
+            Unaided Awareness (Q2_1-Q2_5):
+            {unaided_summary}
+            
+            Total Awareness (Q3_1-Q3_9):
+            {total_awareness_summary}
+            
+            Rata-rata Tingkat Kepuasan (Q20-Q24):
+            {satisfaction_summary}
+            """
 
-                summary_text = call_gemini_api_for_summary(full_summary_data, api_key)
-                if summary_text:
-                    st.markdown(summary_text)
+            summary_text = call_groq_api_for_summary(full_summary_data)
+            if summary_text:
+                st.markdown(summary_text)
 
         st.markdown("<hr style='margin-top: 2rem; margin-bottom: 1.5rem; border: 1px solid #E2E8F0;'>", unsafe_allow_html=True)
 
