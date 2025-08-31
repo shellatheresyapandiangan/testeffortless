@@ -1,7 +1,7 @@
 # ==============================================================================
 # Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 2.0 (dengan fitur unggah file)
+# Versi: 2.1 (dengan pembersihan data yang lebih kuat)
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -118,6 +118,46 @@ def calculate_likert_average(df, col_list):
                 averages[col] = series.mean()
     return pd.DataFrame.from_dict(averages, orient='index', columns=['Rata-rata']).sort_index()
 
+def calculate_frequency_average(df, col_list):
+    """Menghitung rata-rata frekuensi mingguan dari kolom teks."""
+    # Konversi frekuensi ke nilai numerik rata-rata per minggu
+    mapping = {
+        'Setiap hari': 7.0,
+        'Hampir setiap hari': 6.0,
+        '4~6 kali dalam satu minggu': 5.0,
+        '2~3 kali dalam satu minggu': 2.5,
+        '1~2 kali dalam satu minggu': 1.5,
+        'Kurang dari 1 kali dalam satu minggu': 0.5,
+        'Tidak pernah': 0.0,
+        # Konversi bulanan ke mingguan (asumsi 1 bulan = 4.33 minggu)
+        '1x dalam sebulan': 1/4.33,
+        '2x dalam sebulan': 2/4.33,
+        '3x dalam sebulan': 3/4.33,
+        '4x dalam sebulan': 4/4.33,
+        '5x dalam sebulan': 5/4.33,
+        '6x dalam sebulan': 6/4.33,
+        '5-6x dalam sebulan': 5.5/4.33,
+        '1-2 x dalam seminggu': 1.5,
+        '3-4 x dalam seminggu': 3.5,
+        '1-2x dalam seminggu': 1.5,
+        '2-3x dalam seminggu': 2.5,
+        '2x dalam sebulan': 2/4.33,
+        '4-6x dalam seminggu': 5.0,
+        '7x dalam seminggu': 7.0,
+        'Lebih dari 10 kali': 10.0, # Asumsi, bisa disesuaikan
+        'Tidak pernah': 0.0,
+        'Kurang dari 1 kali': 0.5, # Asumsi, bisa disesuaikan
+    }
+    averages = {}
+    for col in col_list:
+        if col in df.columns:
+            series = df[col].astype(str).str.strip().str.lower().map(
+                {k.lower(): v for k, v in mapping.items()}
+            )
+            if not series.isnull().all():
+                averages[col] = series.mean()
+    return pd.DataFrame.from_dict(averages, orient='index', columns=['Rata-rata (Mingguan)']).sort_index()
+
 # --- 4. Logika Utama Aplikasi ---
 st.markdown("<div class='main-column'>", unsafe_allow_html=True)
 st.markdown("<div class='header-title'>Dashboard Analisis Survei Restoran</div>", unsafe_allow_html=True)
@@ -212,33 +252,67 @@ if uploaded_file:
             else:
                 st.info("Tidak ada data tingkat persesuaian.")
 
+        # --- Analisis Frekuensi ---
+        with st.expander("📈 Rata-rata Frekuensi Kunjungan"):
+            st.subheader("Rata-rata Frekuensi (Mingguan)")
+            frequency_cols = [f'S{i}_{j}' for i in range(9, 13) for j in range(1, 8)] + ['S13', 'S14']
+            frequency_avg = calculate_frequency_average(df, frequency_cols)
+            if not frequency_avg.empty:
+                st.dataframe(frequency_avg, use_container_width=True)
+            else:
+                st.info("Tidak ada data frekuensi untuk dianalisis.")
+
         # --- Conceptual Mapping (Crosstab) ---
         with st.expander("🗺️ Pemetaan Konseptual (Tabel Silang)"):
             st.subheader("Tabel Silang (Crosstab)")
-            st.write("Pilih 2 parameter untuk membuat tabel silang. Data yang akan digunakan adalah dari Skala Likert.")
+            st.write("Pilih 2 parameter untuk membuat tabel silang. Data yang akan digunakan adalah dari Skala Likert dan Frekuensi.")
             
-            # Gabungkan semua data Likert ke dalam satu DataFrame untuk kemudahan pivot
+            # Gabungkan semua data numerik ke dalam satu DataFrame untuk kemudahan pivot
             all_likert_cols = [col for col in importance_cols + satisfaction_cols + agreement_cols if col in df.columns]
+            all_frequency_cols = [col for col in frequency_cols if col in df.columns]
+            all_numeric_cols = all_likert_cols + all_frequency_cols
             
-            # Perbaikan: Bersihkan data sebelum membuat DataFrame baru
             likert_df = df.copy()
             
-            mapping = {
+            # Pemetaan nilai string untuk kolom skala Likert
+            likert_mapping = {
                 'Sangat Tidak Setuju': 1, 'Tidak Setuju': 2, 'Netral': 3, 'Setuju': 4, 'Sangat Setuju': 5,
                 'Sangat Tidak Penting': 1, 'Tidak Penting': 2, 'Netral': 3, 'Penting': 4, 'Sangat Penting': 5,
                 'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5
             }
-            
-            # Perbaikan: Menggunakan .replace() dan to_numeric untuk konversi yang lebih aman
             for col in all_likert_cols:
-                likert_df[col] = pd.to_numeric(likert_df[col].replace(mapping), errors='coerce')
+                likert_df[col] = pd.to_numeric(likert_df[col].astype(str).str.strip().replace(likert_mapping), errors='coerce')
 
-            # Perbaikan: Pastikan kolom pivot_col adalah numerik sebelum digunakan
+            # Pemetaan nilai string untuk kolom frekuensi
+            freq_mapping = {
+                'Setiap hari': 7.0, 'Hampir setiap hari': 6.0, '4~6 kali dalam satu minggu': 5.0,
+                '2~3 kali dalam satu minggu': 2.5, '1~2 kali dalam satu minggu': 1.5,
+                'Kurang dari 1 kali dalam satu minggu': 0.5, 'Tidak pernah': 0.0,
+                '1x dalam sebulan': 1/4.33, '2x dalam sebulan': 2/4.33,
+                '3x dalam sebulan': 3/4.33, '4x dalam sebulan': 4/4.33,
+                '5x dalam sebulan': 5/4.33, '6x dalam sebulan': 6/4.33,
+                '5-6x dalam sebulan': 5.5/4.33, '1-2 x dalam seminggu': 1.5,
+                '3-4 x dalam seminggu': 3.5, '1-2x dalam seminggu': 1.5,
+                '2-3x dalam seminggu': 2.5, '2x dalam sebulan': 2/4.33,
+                '4-6x dalam seminggu': 5.0, '7x dalam seminggu': 7.0,
+                'Lebih dari 10 kali': 10.0, 'Kurang dari 1 kali': 0.5,
+            }
+            for col in all_frequency_cols:
+                likert_df[col] = pd.to_numeric(likert_df[col].astype(str).str.strip().str.lower().replace(
+                    {k.lower(): v for k, v in freq_mapping.items()}), errors='coerce')
+            
+            # Pemetaan nilai string ke numerik untuk kolom pivot 'S1' dan 'S2'
+            s1_mapping = {'Laki-laki': 1, 'Perempuan': 2}
+            s2_mapping = {
+                '15 - 19 tahun': 1, '20 - 24 tahun': 2, '25 - 29 tahun': 3, '30 - 34 tahun': 4,
+                '35 - 39 tahun': 5, '40 - 44 tahun': 6, '45 - 49 tahun': 7, '50 - 54 tahun': 8,
+                '>55 tahun': 9
+            }
             if 'S1' in likert_df.columns:
-                likert_df['S1'] = pd.to_numeric(likert_df['S1'], errors='coerce')
+                likert_df['S1'] = likert_df['S1'].astype(str).str.strip().map(s1_mapping)
             if 'S2' in likert_df.columns:
-                likert_df['S2'] = pd.to_numeric(likert_df['S2'], errors='coerce')
-                
+                likert_df['S2'] = likert_df['S2'].astype(str).str.strip().map(s2_mapping)
+            
             pivot_options = ["Jenis Kelamin (S1)", "Usia (S2)"]
             selected_pivot = st.selectbox("Pilih Parameter Pivot:", options=pivot_options)
             
@@ -248,7 +322,7 @@ if uploaded_file:
                 pivot_col = 'S2'
             
             if pivot_col in likert_df.columns and not likert_df[pivot_col].isnull().all():
-                pivot_table = likert_df.groupby(pivot_col)[all_likert_cols].mean().T
+                pivot_table = likert_df.groupby(pivot_col)[all_numeric_cols].mean().T
                 st.dataframe(pivot_table.style.background_gradient(cmap='viridis', axis=None).format(precision=2), use_container_width=True)
             else:
                 st.info(f"Kolom pivot '{pivot_col}' tidak ditemukan atau kosong.")
