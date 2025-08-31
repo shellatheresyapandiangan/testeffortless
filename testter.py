@@ -1,7 +1,7 @@
 # ==============================================================================
 # Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 1.0
+# Versi: 2.0
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -189,7 +189,11 @@ def calculate_likert_average(df, col_list):
         'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5
     }
     averages = {}
-    for col in col_list:
+    
+    # Filter kolom yang ada di DataFrame
+    existing_cols = [col for col in col_list if col in df.columns]
+    
+    for col in existing_cols:
         series = df[col].map(mapping)
         if not series.isnull().all():
             averages[col] = series.mean()
@@ -207,34 +211,41 @@ if not df.empty:
     # --- Analisis Top of Mind & Unaided Awareness ---
     with st.expander("📊 Frekuensi & Persentase (Top of Mind & Unaided)", expanded=True):
         st.subheader("1. Frekuensi Top of Mind (Q1_1)")
-        q1_freq = df['Q1_1'].value_counts().reset_index()
-        q1_freq.columns = ['Restoran', 'Frekuensi']
-        q1_freq['Persentase'] = (q1_freq['Frekuensi'] / len(df) * 100).round(2)
-        st.dataframe(q1_freq, use_container_width=True)
+        if 'Q1_1' in df.columns:
+            q1_freq = df['Q1_1'].value_counts().reset_index()
+            q1_freq.columns = ['Restoran', 'Frekuensi']
+            q1_freq['Persentase'] = (q1_freq['Frekuensi'] / len(df) * 100).round(2)
+            st.dataframe(q1_freq, use_container_width=True)
+        else:
+            st.info("Kolom Q1_1 tidak ditemukan.")
 
         st.subheader("2. Frekuensi Unaided Awareness (Q1_1, Q2_1 - Q2_5)")
-        q2_cols = ['Q2_1', 'Q2_2', 'Q2_3', 'Q2_4', 'Q2_5']
-        unaided_combined = pd.concat([df['Q1_1'].dropna(), process_multi_response(df, ['Q2'])], ignore_index=True)
-        unaided_freq = unaided_combined.value_counts().reset_index()
-        unaided_freq.columns = ['Restoran', 'Frekuensi']
-        st.dataframe(unaided_freq, use_container_width=True)
+        if any(col in df.columns for col in ['Q1_1', 'Q2_1', 'Q2_2', 'Q2_3', 'Q2_4', 'Q2_5']):
+            unaided_combined = pd.concat([df['Q1_1'].dropna() if 'Q1_1' in df.columns else pd.Series(), process_multi_response(df, ['Q2'])], ignore_index=True)
+            unaided_freq = unaided_combined.value_counts().reset_index()
+            unaided_freq.columns = ['Restoran', 'Frekuensi']
+            st.dataframe(unaided_freq, use_container_width=True)
+        else:
+            st.info("Kolom untuk unaided awareness tidak ditemukan.")
 
     # --- Analisis Total Awareness ---
     with st.expander("📈 Total Awareness"):
         st.subheader("Frekuensi Total Awareness (Q3_1 - Q3_9)")
-        q3_cols = ['Q3_1', 'Q3_2', 'Q3_3', 'Q3_4', 'Q3_5', 'Q3_6', 'Q3_7', 'Q3_8', 'Q3_9']
-        total_awareness_combined = process_multi_response(df, ['Q3'])
-        total_awareness_freq = total_awareness_combined.value_counts().reset_index()
-        total_awareness_freq.columns = ['Restoran', 'Frekuensi']
-        st.dataframe(total_awareness_freq, use_container_width=True)
+        if any(col in df.columns for col in ['Q3_1', 'Q3_2', 'Q3_3', 'Q3_4', 'Q3_5']):
+            total_awareness_combined = process_multi_response(df, ['Q3'])
+            total_awareness_freq = total_awareness_combined.value_counts().reset_index()
+            total_awareness_freq.columns = ['Restoran', 'Frekuensi']
+            st.dataframe(total_awareness_freq, use_container_width=True)
+        else:
+            st.info("Kolom untuk total awareness tidak ditemukan.")
 
     # --- Analisis Brand Image ---
     with st.expander("🖼️ Brand Image"):
         st.subheader("Frekuensi Brand Image (Q15_1 - Q15_8)")
-        brand_image_cols = ['Q15_1', 'Q15_2', 'Q15_3', 'Q15_4', 'Q15_5', 'Q15_6', 'Q15_7', 'Q15_8']
+        brand_image_cols = [f'Q15_{i}' for i in range(1, 9)]
         for col in brand_image_cols:
             if col in df.columns and not df[col].isnull().all():
-                st.markdown(f"**{col}:** {df.columns.get_loc(col)}") # Menampilkan label kolom yang relevan
+                st.markdown(f"**{col}:**") 
                 st.dataframe(df[col].value_counts().reset_index().rename(columns={'index': 'Respons', col: 'Frekuensi'}), use_container_width=True)
             else:
                 st.info(f"Tidak ada data untuk kolom {col}.")
@@ -242,20 +253,20 @@ if not df.empty:
     # --- Analisis Skala Likert (Rata-rata) ---
     with st.expander("📊 Rata-rata Skala Likert"):
         # Tingkat Kepentingan (Q16_1 - Q19_5)
-        st.subheader("1. Tingkat Kepentingan (Q16_1 - Q19_5)")
-        importance_cols = [f'Q{i}_{j}' for i in range(16, 20) for j in (range(1, 6) if i in [16, 17, 19] else range(1, 6))]
+        st.subheader("1. Tingkat Kepentingan")
+        importance_cols = [f'Q{i}_{j}' for i in range(16, 20) for j in range(1, 6)]
         importance_avg = calculate_likert_average(df, importance_cols)
         st.dataframe(importance_avg, use_container_width=True)
         
         # Tingkat Kepuasan (Q20_1 - Q24_5)
-        st.subheader("2. Tingkat Kepuasan (Q20_1 - Q24_5)")
-        satisfaction_cols = [f'Q{i}_{j}' for i in range(20, 25) for j in (range(1, 6) if i in [20, 24] else range(1, 4))]
+        st.subheader("2. Tingkat Kepuasan")
+        satisfaction_cols = [f'Q{i}_{j}' for i in range(20, 25) for j in range(1, 6)]
         satisfaction_avg = calculate_likert_average(df, satisfaction_cols)
         st.dataframe(satisfaction_avg, use_container_width=True)
         
         # Tingkat Persesuaian (Q25_1 - Q28_2)
-        st.subheader("3. Tingkat Persesuaian (Q25_1 - Q28_2)")
-        agreement_cols = [f'Q{i}_{j}' for i in range(25, 29) for j in (range(1, 5) if i in [25, 26] else range(1, 4) if i==27 else range(1, 3))]
+        st.subheader("3. Tingkat Persesuaian")
+        agreement_cols = [f'Q{i}_{j}' for i in range(25, 29) for j in range(1, 5)]
         agreement_avg = calculate_likert_average(df, agreement_cols)
         st.dataframe(agreement_avg, use_container_width=True)
 
@@ -265,14 +276,21 @@ if not df.empty:
         st.write("Pilih 2 parameter untuk membuat tabel silang. Data yang akan digunakan adalah dari Skala Likert.")
         
         # Gabungkan semua data Likert ke dalam satu DataFrame untuk kemudahan pivot
-        all_likert_cols = importance_cols + satisfaction_cols + agreement_cols
+        all_likert_cols = [
+            col for col in df.columns if re.match(r'Q(1[5-9]|2[0-8])_\d+', col)
+        ]
+        
         likert_df = df[['S1', 'S2'] + all_likert_cols].copy()
+        
+        # Menggunakan mapping yang lebih efisien
+        likert_mapping = {
+            'Sangat Tidak Setuju': 1, 'Tidak Setuju': 2, 'Netral': 3, 'Setuju': 4, 'Sangat Setuju': 5,
+            'Sangat Tidak Penting': 1, 'Tidak Penting': 2, 'Netral': 3, 'Penting': 4, 'Sangat Penting': 5,
+            'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5
+        }
+        
         for col in all_likert_cols:
-            likert_df[col] = likert_df[col].replace({
-                'Sangat Tidak Setuju': 1, 'Tidak Setuju': 2, 'Netral': 3, 'Setuju': 4, 'Sangat Setuju': 5,
-                'Sangat Tidak Penting': 1, 'Tidak Penting': 2, 'Netral': 3, 'Penting': 4, 'Sangat Penting': 5,
-                'Sangat Tidak Puas': 1, 'Tidak Puas': 2, 'Netral': 3, 'Puas': 4, 'Sangat Puas': 5
-            })
+            likert_df[col] = likert_df[col].map(likert_mapping)
             
         # Pilihan untuk tabel silang
         likert_options = ["Tingkat Kepentingan", "Tingkat Kepuasan", "Tingkat Persesuaian"]
@@ -282,20 +300,23 @@ if not df.empty:
         selected_pivot = st.selectbox("Pilih Parameter Pivot:", options=pivot_options)
         
         if selected_likert == "Tingkat Kepentingan":
-            cols_to_pivot = importance_cols
+            cols_to_pivot = [col for col in all_likert_cols if re.match(r'Q(1[6-9])_\d+', col)]
         elif selected_likert == "Tingkat Kepuasan":
-            cols_to_pivot = satisfaction_cols
+            cols_to_pivot = [col for col in all_likert_cols if re.match(r'Q(2[0-4])_\d+', col)]
         else:
-            cols_to_pivot = agreement_cols
-        
+            cols_to_pivot = [col for col in all_likert_cols if re.match(r'Q(2[5-8])_\d+', col)]
+            
         # Membuat tabel silang
         if selected_pivot == "Jenis Kelamin (S1)":
             pivot_col = 'S1'
         else:
             pivot_col = 'S2'
-            
-        pivot_table = likert_df.groupby(pivot_col)[cols_to_pivot].mean().T
-        pivot_table.columns = pivot_table.columns.astype(str)
-        st.dataframe(pivot_table.style.background_gradient(cmap='viridis', axis=None).format(precision=2), use_container_width=True)
+        
+        if pivot_col in likert_df.columns and cols_to_pivot:
+            pivot_table = likert_df.groupby(pivot_col)[cols_to_pivot].mean().T
+            pivot_table.columns = pivot_table.columns.astype(str)
+            st.dataframe(pivot_table.style.background_gradient(cmap='viridis', axis=None).format(precision=2), use_container_width=True)
+        else:
+            st.info("Kolom yang dipilih tidak ditemukan dalam data.")
 
 st.markdown("</div>", unsafe_allow_html=True)
