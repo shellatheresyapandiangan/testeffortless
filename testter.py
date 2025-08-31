@@ -219,7 +219,10 @@ if uploaded_file:
             
             # Gabungkan semua data Likert ke dalam satu DataFrame untuk kemudahan pivot
             all_likert_cols = [col for col in importance_cols + satisfaction_cols + agreement_cols if col in df.columns]
-            likert_df = df[['S1', 'S2'] + all_likert_cols].copy()
+            
+            # Perbaikan: Bersihkan data sebelum membuat DataFrame baru
+            likert_df = df.copy()
+            
             mapping = {
                 'Sangat Tidak Setuju': 1, 'Tidak Setuju': 2, 'Netral': 3, 'Setuju': 4, 'Sangat Setuju': 5,
                 'Sangat Tidak Penting': 1, 'Tidak Penting': 2, 'Netral': 3, 'Penting': 4, 'Sangat Penting': 5,
@@ -229,6 +232,12 @@ if uploaded_file:
             # Perbaikan: Menggunakan .replace() dan to_numeric untuk konversi yang lebih aman
             for col in all_likert_cols:
                 likert_df[col] = likert_df[col].replace(mapping).astype(float)
+
+            # Perbaikan: Pastikan kolom pivot_col adalah numerik sebelum digunakan
+            if 'S1' in likert_df.columns:
+                likert_df['S1'] = pd.to_numeric(likert_df['S1'], errors='coerce')
+            if 'S2' in likert_df.columns:
+                likert_df['S2'] = pd.to_numeric(likert_df['S2'], errors='coerce')
                 
             pivot_options = ["Jenis Kelamin (S1)", "Usia (S2)"]
             selected_pivot = st.selectbox("Pilih Parameter Pivot:", options=pivot_options)
