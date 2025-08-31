@@ -1,7 +1,7 @@
 # ==============================================================================
 # Dashboard Analisis Survei Restoran
 # Analisis Data survei yang kompleks dan multi-respon
-# Versi: 2.4 (Perbaikan error dan data yang tercampur)
+# Versi: 2.5 (Perbaikan error dan pemisahan data)
 # ==============================================================================
 
 # --- 1. Impor Library ---
@@ -202,7 +202,7 @@ if uploaded_file:
                 st.info("Kolom 'Q1_1' tidak ditemukan dalam data.")
             
             st.subheader("2. Frekuensi Unaided Awareness (Q1_1, Q2_1 - Q2_5)")
-            unaided_cols = [f'Q2_{i}' for i in range(1, 6)]
+            unaided_cols = [f'Q2_{i}' for i in range(1, 6) if f'Q2_{i}' in df.columns]
             unaided_combined = pd.concat([df.get('Q1_1', pd.Series()).dropna(), process_multi_response(df, unaided_cols)], ignore_index=True)
             if not unaided_combined.empty:
                 unaided_freq = unaided_combined.value_counts().reset_index()
@@ -214,7 +214,7 @@ if uploaded_file:
         # --- Analisis Total Awareness ---
         with st.expander("📈 Total Awareness"):
             st.subheader("Frekuensi Total Awareness (Q3_1 - Q3_9)")
-            total_awareness_cols = [f'Q3_{i}' for i in range(1, 10)]
+            total_awareness_cols = [f'Q3_{i}' for i in range(1, 10) if f'Q3_{i}' in df.columns]
             total_awareness_combined = process_multi_response(df, total_awareness_cols)
             if not total_awareness_combined.empty:
                 total_awareness_freq = total_awareness_combined.value_counts().reset_index()
@@ -324,6 +324,8 @@ if uploaded_file:
                 '30 - 34 tahun': '30-34', '35 - 39 tahun': '35-39', '40 - 44 tahun': '40-44', 
                 '45 - 49 tahun': '45-49', '50 - 54 tahun': '50-54', '>55 tahun': '>55'
             }
+            
+            # Memeriksa keberadaan kolom 'S1' dan 'S2'
             if 'S1' in likert_df.columns:
                 likert_df['S1'] = likert_df['S1'].astype(str).str.strip().map(s1_mapping)
             if 'S2' in likert_df.columns:
@@ -337,6 +339,7 @@ if uploaded_file:
             else:
                 pivot_col = 'S2'
             
+            # Memastikan kolom pivot ada sebelum melanjutkan
             if pivot_col in likert_df.columns and not likert_df[pivot_col].isnull().all() and all_numeric_cols:
                 pivot_table = likert_df.groupby(pivot_col)[all_numeric_cols].mean()
                 
@@ -362,6 +365,6 @@ if uploaded_file:
                 
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.info(f"Kolom pivot '{pivot_col}' tidak ditemukan atau tidak ada data numerik untuk dianalisis.")
+                st.info(f"Kolom pivot '{pivot_col}' tidak ditemukan, atau tidak ada data numerik untuk dianalisis.")
 
 st.markdown("</div>", unsafe_allow_html=True)
