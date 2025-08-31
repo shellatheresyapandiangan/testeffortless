@@ -269,7 +269,9 @@ if not df.empty:
         for col in brand_image_cols:
             if col in df.columns and not df[col].isnull().all():
                 st.markdown(f"**{col}:**")
-                freq_data = df[col].value_counts().reset_index().rename(columns={'index': 'Respons', col: 'Frekuensi'})
+                
+                # --- Perbaikan: Pastikan nama kolom 'Respons' dan 'Frekuensi' sudah benar ---
+                freq_data = df[col].value_counts().reset_index().rename(columns={'index': 'Respons', 'count': 'Frekuensi'})
                 
                 col1, col2 = st.columns(2)
                 with col1:
